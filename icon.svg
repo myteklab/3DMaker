@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="url(#bg)"/>
+
+  <!-- Workplane grid lines (subtle) -->
+  <g opacity="0.15" stroke="#667eea" stroke-width="0.5">
+    <line x1="20" y1="72" x2="50" y2="85"/>
+    <line x1="32" y1="66" x2="62" y2="79"/>
+    <line x1="44" y1="60" x2="74" y2="73"/>
+    <line x1="26" y1="82" x2="56" y2="62"/>
+    <line x1="38" y1="85" x2="68" y2="65"/>
+    <line x1="50" y1="85" x2="80" y2="68"/>
+  </g>
+
+  <!-- Main 3D box (isometric) -->
+  <g transform="translate(42, 42)">
+    <!-- Top face -->
+    <polygon points="0,-12 22,-1 0,10 -22,-1" fill="#667eea"/>
+    <!-- Right face -->
+    <polygon points="22,-1 22,20 0,31 0,10" fill="#4a5bc7"/>
+    <!-- Left face -->
+    <polygon points="-22,-1 0,10 0,31 -22,20" fill="#5568d9"/>
+  </g>
+
+  <!-- Sphere (top-right) -->
+  <circle cx="68" cy="28" r="10" fill="#f43f5e"/>
+  <ellipse cx="65" cy="25" rx="4" ry="3" fill="#ff6b8a" opacity="0.6"/>
+
+  <!-- Cylinder (left) -->
+  <g transform="translate(22, 50)">
+    <rect x="-6" y="-4" width="12" height="18" fill="#22c55e" rx="0"/>
+    <ellipse cx="0" cy="-4" rx="6" ry="3" fill="#3ddc84"/>
+    <ellipse cx="0" cy="14" rx="6" ry="3" fill="#1a9e48"/>
+  </g>
+
+  <!-- Cone (small, front-right) -->
+  <g transform="translate(72, 58)">
+    <polygon points="0,-12 8,6 -8,6" fill="#f59e0b"/>
+    <ellipse cx="0" cy="6" rx="8" ry="3.5" fill="#d48b1a"/>
+  </g>
+
+  <!-- Move gizmo arrows (on the box) -->
+  <g transform="translate(42, 30)" opacity="0.9">
+    <!-- X arrow (red) -->
+    <line x1="0" y1="0" x2="14" y2="0" stroke="#f43f5e" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="14,-3 20,0 14,3" fill="#f43f5e"/>
+    <!-- Y arrow (green, up) -->
+    <line x1="0" y1="0" x2="0" y2="-14" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="-3,-14 0,-20 3,-14" fill="#22c55e"/>
+    <!-- Z arrow (blue) -->
+    <line x1="0" y1="0" x2="-10" y2="6" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+    <polygon points="-8,9 -16,12 -10,4" fill="#3b82f6"/>
+  </g>
+</svg>

@@ -29,7 +29,7 @@ async function undo() {
     if (historyIndex > 0) {
 historyIndex--;
 const state = history[historyIndex];
-await loadProjectData(state.data);
+await _loadSceneFromData(state.data);
 objectCounter = state.objectCounter;
 showToast('Undo: ' + state.action);
     } else if (history.length === 0) {
@@ -43,7 +43,7 @@ async function redo() {
     if (historyIndex < history.length - 1) {
 historyIndex++;
 const state = history[historyIndex];
-await loadProjectData(state.data);
+await _loadSceneFromData(state.data);
 objectCounter = state.objectCounter;
 showToast('Redo: ' + state.action);
     }

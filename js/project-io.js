@@ -96,11 +96,11 @@ window.loadProjectData = async function(data) {
     if (typeof data === 'string') {
         data = JSON.parse(data);
     }
-    await loadProjectData(data);
+    await _loadSceneFromData(data);
     hasUnsavedChanges = false;
 };
 
-async function loadProjectData(data) {
+async function _loadSceneFromData(data) {
     if (typeof data === 'string') {
         data = JSON.parse(data);
     }
