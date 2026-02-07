@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3DMaker</title>
+
+    <!-- Babylon.js -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+
+    <!-- Font rendering libraries for 3D text -->
+    <script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/earcut@2.2.4/dist/earcut.min.js"></script>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Top Menu -->
+    <div id="menu-bar">
+        <div id="app-title">3DMaker</div>
+        <button class="menu-btn" onclick="exportSTL()">Export STL</button>
+        <button class="menu-btn" onclick="undo()">Undo</button>
+        <button class="menu-btn" onclick="redo()">Redo</button>
+        <button class="menu-btn" onclick="duplicateObject()" title="Duplicate selected object (Ctrl+D)">Duplicate</button>
+        <button class="menu-btn" onclick="openMirrorModal()" title="Mirror selected object (Shift+X/Y/Z)">Mirror</button>
+        <button class="menu-btn" id="toggle-workplane-btn" onclick="toggleWorkplane()" title="Show/Hide Grid & Axes">
+            Grid
+        </button>
+        <button class="menu-btn" id="snap-to-grid-btn" onclick="toggleSnapToGrid()" title="Snap to Grid (10mm, or hold Shift for 1mm) - Press S to toggle">
+            Snap
+        </button>
+        <button class="menu-btn" id="toggle-overlays-btn" onclick="toggleOverlays()" title="Show/Hide Info Overlays">
+            Info
+        </button>
+        <div style="margin-left: auto; display: flex; gap: 10px;">
+            <button class="menu-btn active" id="move-mode-btn" onclick="setTransformMode('position')" title="Move position (W)">
+                Move
+            </button>
+            <button class="menu-btn" id="rotate-mode-btn" onclick="setTransformMode('rotation')" title="Rotate (E)">
+                Rotate
+            </button>
+            <button class="menu-btn" id="size-mode-btn" onclick="setTransformMode('size')" title="Change dimensions in mm - Drag face handles to resize (T). Note: Scales from center.">
+                Size
+            </button>
+            <button class="menu-btn" id="scale-mode-btn" onclick="setTransformMode('scaling')" title="Scale proportionally (R)">
+                Scale
+            </button>
+            <button class="menu-btn" id="grab-mode-btn" onclick="setTransformMode('grab')" title="Grab and drag freely on workplane (G)">
+                Grab
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="main-container">
+        <!-- Left Panel - Objects List -->
+        <div id="left-panel">
+            <div class="panel-header">Objects</div>
+            <div id="objects-list">
+                <div style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;">
+                    Add shapes from the right panel
+                </div>
+            </div>
+        </div>
+
+        <!-- Center - 3D Viewport -->
+        <div id="viewport-container">
+            <canvas id="renderCanvas" style="background: #0f0f1e;"></canvas>
+            <div id="viewport-info">
+                Left-click: Rotate | Middle-click: Pan | Scroll: Zoom<br>
+                Build platform: 200x200mm | Grid: 10mm squares
+            </div>
+            <!-- Real-time dimension feedback during resize -->
+            <div id="dimension-label"></div>
+
+            <!-- 3D Orientation Gizmo -->
+            <canvas id="orientation-gizmo"></canvas>
+        </div>
+
+        <!-- Right Panel - Tools & Properties -->
+        <div id="right-panel">
+            <!-- Add Shapes -->
+            <div class="tool-section">
+                <h3>Add Shape</h3>
+                <div class="shape-grid">
+                    <button class="shape-btn" onclick="addShape('box')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M24 8L40 16V32L24 40L8 32V16L24 8Z"/>
+                            <path d="M24 8V24M24 24L40 32M24 24L8 32M24 24V40"/>
+                        </svg>
+                        <span>Box</span>
+                    </button>
+                    <button class="shape-btn" onclick="addShape('sphere')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="24" cy="24" r="16"/>
+                            <ellipse cx="24" cy="24" rx="16" ry="8"/>
+                            <ellipse cx="24" cy="24" rx="8" ry="16"/>
+                        </svg>
+                        <span>Sphere</span>
+                    </button>
+                    <button class="shape-btn" onclick="addShape('cylinder')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <ellipse cx="24" cy="12" rx="12" ry="5"/>
+                            <ellipse cx="24" cy="36" rx="12" ry="5"/>
+                            <line x1="12" y1="12" x2="12" y2="36"/>
+                            <line x1="36" y1="12" x2="36" y2="36"/>
+                        </svg>
+                        <span>Cylinder</span>
+                    </button>
+                    <button class="shape-btn" onclick="addShape('cone')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <ellipse cx="24" cy="36" rx="14" ry="6"/>
+                            <path d="M10 36L24 8L38 36"/>
+                        </svg>
+                        <span>Cone</span>
+                    </button>
+                    <button class="shape-btn" onclick="addShape('torus')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <ellipse cx="24" cy="24" rx="16" ry="8"/>
+                            <ellipse cx="24" cy="24" rx="10" ry="5"/>
+                            <path d="M24 8C16 8 10 14 10 20M24 40C32 40 38 34 38 28"/>
+                        </svg>
+                        <span>Torus</span>
+                    </button>
+                    <button class="shape-btn" onclick="addShape('pyramid')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M24 8L38 38H10L24 8Z"/>
+                            <path d="M24 8L24 38M10 38L24 8L38 38"/>
+                        </svg>
+                        <span>Pyramid</span>
+                    </button>
+                    <button class="shape-btn" onclick="addShape('capsule')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="12" x2="18" y2="36"/>
+                            <line x1="30" y1="12" x2="30" y2="36"/>
+                            <path d="M18 12C18 9 20 7 24 7C28 7 30 9 30 12"/>
+                            <path d="M18 36C18 39 20 41 24 41C28 41 30 39 30 36"/>
+                        </svg>
+                        <span>Capsule</span>
+                    </button>
+                    <button class="shape-btn" onclick="addShape('tube')">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <ellipse cx="24" cy="12" rx="12" ry="5"/>
+                            <ellipse cx="24" cy="36" rx="12" ry="5"/>
+                            <ellipse cx="24" cy="12" rx="7" ry="3"/>
+                            <ellipse cx="24" cy="36" rx="7" ry="3"/>
+                            <line x1="12" y1="12" x2="12" y2="36"/>
+                            <line x1="36" y1="12" x2="36" y2="36"/>
+                            <line x1="17" y1="12" x2="17" y2="36"/>
+                            <line x1="31" y1="12" x2="31" y2="36"/>
+                        </svg>
+                        <span>Tube</span>
+                    </button>
+                    <button class="shape-btn" onclick="openTextModal()" title="Text features are experimental - may have issues with CSG operations">
+                        <svg class="shape-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <text x="12" y="32" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="currentColor" stroke="none">A</text>
+                        </svg>
+                        <span>Text</span>
+                        <div style="
+                            position: absolute;
+                            top: 4px;
+                            right: 4px;
+                            background: #f59e0b;
+                            color: white;
+                            font-size: 7px;
+                            font-weight: bold;
+                            padding: 2px 4px;
+                            border-radius: 3px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.3px;
+                        ">Experimental</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pattern Builder Button -->
+            <div class="tool-section">
+                <button class="menu-btn" onclick="openPatternBuilder()" style="width: 100%; padding: 12px; font-size: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    Create Pattern
+                </button>
+                <div style="font-size: 11px; color: #888; margin-top: 8px; text-align: center;">
+                    Make rows, grids, circles, or spirals of shapes
+                </div>
+            </div>
+
+            <!-- CSG Operations -->
+            <div class="tool-section">
+                <h3>Combine Shapes</h3>
+                <div class="csg-buttons">
+                    <button class="csg-btn" id="union-btn" onclick="performCSG('union')" disabled>
+                        <svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="18" cy="24" r="10" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
+                            <circle cx="30" cy="24" r="10" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
+                        </svg>
+                        <span>Union</span>
+                    </button>
+                    <button class="csg-btn" id="subtract-btn" onclick="performCSG('subtract')" disabled>
+                        <svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="20" cy="24" r="12" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
+                            <circle cx="28" cy="24" r="8" fill="none" stroke="#667eea" stroke-dasharray="3,3"/>
+                        </svg>
+                        <span>Subtract</span>
+                    </button>
+                    <button class="csg-btn" id="intersect-btn" onclick="performCSG('intersect')" disabled>
+                        <svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="18" cy="24" r="10" fill="none" stroke="#667eea" stroke-dasharray="3,3" opacity="0.4"/>
+                            <circle cx="30" cy="24" r="10" fill="none" stroke="#667eea" stroke-dasharray="3,3" opacity="0.4"/>
+                            <ellipse cx="24" cy="24" rx="4" ry="10" fill="rgba(102, 126, 234, 0.6)" stroke="#667eea"/>
+                        </svg>
+                        <span>Intersect</span>
+                    </button>
+                </div>
+                <div style="font-size: 11px; color: #888; margin-top: 10px;">
+                    Select 2 objects to combine
+                </div>
+            </div>
+
+            <!-- Alignment Tools -->
+            <div class="tool-section" id="alignment-section">
+                <h3>Align</h3>
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 11px; color: #aaa; margin-bottom: 8px;">Align to Grid:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <button class="menu-btn" onclick="alignToCenter()" title="Align to grid center (0,0)" style="padding: 6px; font-size: 11px;">
+                            Center
+                        </button>
+                        <button class="menu-btn" onclick="alignToOrigin()" title="Align to origin (0,0,0)" style="padding: 6px; font-size: 11px;">
+                            Origin
+                        </button>
+                    </div>
+                </div>
+                <div id="align-objects-section" style="display: none;">
+                    <div style="font-size: 11px; color: #aaa; margin-bottom: 8px;">Align Objects:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                        <button class="menu-btn" onclick="alignObjects('left')" title="Align left edges" style="padding: 6px; font-size: 11px;">Left</button>
+                        <button class="menu-btn" onclick="alignObjects('centerX')" title="Align horizontal centers" style="padding: 6px; font-size: 11px;">H</button>
+                        <button class="menu-btn" onclick="alignObjects('right')" title="Align right edges" style="padding: 6px; font-size: 11px;">Right</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                        <button class="menu-btn" onclick="alignObjects('front')" title="Align front edges" style="padding: 6px; font-size: 11px;">Front</button>
+                        <button class="menu-btn" onclick="alignObjects('centerY')" title="Align depth centers" style="padding: 6px; font-size: 11px;">D</button>
+                        <button class="menu-btn" onclick="alignObjects('back')" title="Align back edges" style="padding: 6px; font-size: 11px;">Back</button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                        <button class="menu-btn" onclick="alignObjects('bottom')" title="Align bottom edges" style="padding: 6px; font-size: 11px;">Bottom</button>
+                        <button class="menu-btn" onclick="alignObjects('centerZ')" title="Align vertical centers" style="padding: 6px; font-size: 11px;">V</button>
+                        <button class="menu-btn" onclick="alignObjects('top')" title="Align top edges" style="padding: 6px; font-size: 11px;">Top</button>
+                    </div>
+                    <div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center;">
+                        Aligns all selected to first selected
+                    </div>
+                </div>
+            </div>
+
+            <!-- Properties -->
+            <div class="tool-section" id="properties-section">
+                <h3>Properties</h3>
+                <div id="properties-content">
+                    <div style="text-align: center; color: #666; font-size: 12px;">
+                        Select an object to edit
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pattern Builder Styles -->
+    <style>
+        .pattern-type-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .pattern-type-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .pattern-type-btn.active {
+            background: rgba(102, 126, 234, 0.3);
+            border: 1px solid rgba(102, 126, 234, 0.5);
+        }
+    </style>
+
+    <!-- Pattern Builder Panel (Hidden by default) -->
+    <div id="pattern-panel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(102, 126, 234, 0.5); border-radius: 12px; padding: 24px; width: 400px; max-width: 90vw; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px;">Pattern Builder</h2>
+            <button onclick="closePatternBuilder()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">x</button>
+        </div>
+
+        <!-- Pattern Type Selection -->
+        <div style="margin-bottom: 20px;">
+            <div style="font-size: 13px; color: #aaa; margin-bottom: 8px;">Pattern Type:</div>
+            <div style="display: flex; gap: 8px;">
+                <button id="pattern-row-btn" class="pattern-type-btn active" onclick="setPatternType('row')">
+                    <svg width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="4" cy="12" r="3" fill="currentColor" opacity="0.3"/>
+                        <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.5"/>
+                        <circle cx="20" cy="12" r="3" fill="currentColor" opacity="0.7"/>
+                        <circle cx="28" cy="12" r="3" fill="currentColor" opacity="0.9"/>
+                    </svg>
+                    <span>Row</span>
+                </button>
+                <button id="pattern-grid-btn" class="pattern-type-btn" onclick="setPatternType('grid')">
+                    <svg width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="8" cy="6" r="2.5" fill="currentColor" opacity="0.6"/>
+                        <circle cx="16" cy="6" r="2.5" fill="currentColor" opacity="0.6"/>
+                        <circle cx="24" cy="6" r="2.5" fill="currentColor" opacity="0.6"/>
+                        <circle cx="8" cy="12" r="2.5" fill="currentColor" opacity="0.8"/>
+                        <circle cx="16" cy="12" r="2.5" fill="currentColor" opacity="0.8"/>
+                        <circle cx="24" cy="12" r="2.5" fill="currentColor" opacity="0.8"/>
+                        <circle cx="8" cy="18" r="2.5" fill="currentColor" opacity="1"/>
+                        <circle cx="16" cy="18" r="2.5" fill="currentColor" opacity="1"/>
+                        <circle cx="24" cy="18" r="2.5" fill="currentColor" opacity="1"/>
+                    </svg>
+                    <span>Grid</span>
+                </button>
+                <button id="pattern-circle-btn" class="pattern-type-btn" onclick="setPatternType('circle')">
+                    <svg width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="16" cy="4" r="2.5" fill="currentColor" opacity="0.7"/>
+                        <circle cx="25" cy="8" r="2.5" fill="currentColor" opacity="0.8"/>
+                        <circle cx="28" cy="16" r="2.5" fill="currentColor" opacity="0.9"/>
+                        <circle cx="22" cy="21" r="2.5" fill="currentColor" opacity="1"/>
+                        <circle cx="10" cy="21" r="2.5" fill="currentColor" opacity="1"/>
+                        <circle cx="4" cy="16" r="2.5" fill="currentColor" opacity="0.9"/>
+                        <circle cx="7" cy="8" r="2.5" fill="currentColor" opacity="0.8"/>
+                    </svg>
+                    <span>Circle</span>
+                </button>
+                <button id="pattern-helix-btn" class="pattern-type-btn" onclick="setPatternType('helix')">
+                    <svg width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="16" cy="4" r="2" fill="currentColor" opacity="0.4"/>
+                        <circle cx="24" cy="6" r="2" fill="currentColor" opacity="0.5"/>
+                        <circle cx="28" cy="10" r="2" fill="currentColor" opacity="0.6"/>
+                        <circle cx="26" cy="14" r="2" fill="currentColor" opacity="0.7"/>
+                        <circle cx="18" cy="16" r="2" fill="currentColor" opacity="0.8"/>
+                        <circle cx="10" cy="18" r="2" fill="currentColor" opacity="0.9"/>
+                        <circle cx="6" cy="20" r="2" fill="currentColor" opacity="1"/>
+                    </svg>
+                    <span>Helix</span>
+                </button>
+                <button id="pattern-spiral-btn" class="pattern-type-btn" onclick="setPatternType('spiral')">
+                    <svg width="32" height="24" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="16" cy="12" r="2" fill="currentColor" opacity="0.5"/>
+                        <circle cx="19" cy="12" r="2" fill="currentColor" opacity="0.6"/>
+                        <circle cx="21" cy="14" r="2" fill="currentColor" opacity="0.7"/>
+                        <circle cx="21" cy="17" r="2" fill="currentColor" opacity="0.8"/>
+                        <circle cx="18" cy="19" r="2" fill="currentColor" opacity="0.9"/>
+                        <circle cx="14" cy="19" r="2" fill="currentColor" opacity="1"/>
+                        <circle cx="10" cy="17" r="2" fill="currentColor" opacity="1"/>
+                    </svg>
+                    <span>Spiral</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Row Settings -->
+        <div id="row-settings" class="pattern-settings" style="display: block;">
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Count: <span id="row-count-value">5</span></label>
+                <input type="range" min="2" max="50" value="5" step="1" oninput="updatePatternSetting('count', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">X Spacing (Left/Right): <span id="row-spacingX-value">20mm</span></label>
+                <input type="range" min="0" max="100" value="20" step="5" oninput="updatePatternSetting('spacingX', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Y Spacing (Front/Back): <span id="row-spacingY-value">0mm</span></label>
+                <input type="range" min="0" max="100" value="0" step="5" oninput="updatePatternSetting('spacingY', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Z Spacing (Up/Down): <span id="row-spacingZ-value">0mm</span></label>
+                <input type="range" min="0" max="100" value="0" step="5" oninput="updatePatternSetting('spacingZ', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="font-size: 11px; color: #888; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                <strong>Tip:</strong> Set spacing in multiple axes to create stairs, ramps, or diagonal patterns!
+            </div>
+        </div>
+
+        <!-- Grid Settings -->
+        <div id="grid-settings" class="pattern-settings" style="display: none;">
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Plane:</label>
+                <select onchange="updatePatternSetting('plane', this.value)" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #fff; margin-top: 4px;">
+                    <option value="xy">XY (Horizontal/Flat)</option>
+                    <option value="xz">XZ (Vertical Wall - Front)</option>
+                    <option value="yz">YZ (Vertical Wall - Side)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Rows: <span id="grid-rows-value">3</span></label>
+                <input type="range" min="2" max="20" value="3" step="1" oninput="updatePatternSetting('rows', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Columns: <span id="grid-columns-value">3</span></label>
+                <input type="range" min="2" max="20" value="3" step="1" oninput="updatePatternSetting('columns', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Spacing 1: <span id="grid-spacingX-value">20mm</span></label>
+                <input type="range" min="5" max="100" value="20" step="5" oninput="updatePatternSetting('spacingX', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div>
+                <label style="font-size: 13px; color: #aaa;">Spacing 2: <span id="grid-spacingY-value">20mm</span></label>
+                <input type="range" min="5" max="100" value="20" step="5" oninput="updatePatternSetting('spacingY', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+        </div>
+
+        <!-- Circle Settings -->
+        <div id="circle-settings" class="pattern-settings" style="display: none;">
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Orientation:</label>
+                <select onchange="updatePatternSetting('orientation', this.value)" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #fff; margin-top: 4px;">
+                    <option value="xy">XY (Horizontal Circle)</option>
+                    <option value="xz">XZ (Vertical - Ferris Wheel)</option>
+                    <option value="yz">YZ (Vertical - Side View)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Count: <span id="circle-count-value">8</span></label>
+                <input type="range" min="3" max="30" value="8" step="1" oninput="updatePatternSetting('count', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div>
+                <label style="font-size: 13px; color: #aaa;">Radius: <span id="circle-radius-value">50mm</span></label>
+                <input type="range" min="20" max="100" value="50" step="5" oninput="updatePatternSetting('radius', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+        </div>
+
+        <!-- Helix Settings -->
+        <div id="helix-settings" class="pattern-settings" style="display: none;">
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Orientation:</label>
+                <select onchange="updatePatternSetting('orientation', this.value)" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #fff; margin-top: 4px;">
+                    <option value="xy">XY (Spiral Upward)</option>
+                    <option value="xz">XZ (Spiral Forward)</option>
+                    <option value="yz">YZ (Spiral Sideways)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Count: <span id="helix-count-value">12</span></label>
+                <input type="range" min="3" max="100" value="12" step="1" oninput="updatePatternSetting('count', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Rotations: <span id="helix-rotations-value">3</span></label>
+                <input type="range" min="1" max="10" value="3" step="1" oninput="updatePatternSetting('rotations', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Radius: <span id="helix-radius-value">40mm</span></label>
+                <input type="range" min="20" max="100" value="40" step="5" oninput="updatePatternSetting('radius', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div>
+                <label style="font-size: 13px; color: #aaa;">Height: <span id="helix-height-value">100mm</span></label>
+                <input type="range" min="10" max="200" value="100" step="10" oninput="updatePatternSetting('height', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+        </div>
+
+        <!-- Spiral Settings -->
+        <div id="spiral-settings" class="pattern-settings" style="display: none;">
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Orientation:</label>
+                <select onchange="updatePatternSetting('orientation', this.value)" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: #fff; margin-top: 4px;">
+                    <option value="xy">XY (Horizontal Spiral)</option>
+                    <option value="xz">XZ (Vertical Wall)</option>
+                    <option value="yz">YZ (Vertical Wall - Side)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Count: <span id="spiral-count-value">12</span></label>
+                <input type="range" min="3" max="100" value="12" step="1" oninput="updatePatternSetting('count', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Rotations: <span id="spiral-rotations-value">3</span></label>
+                <input type="range" min="1" max="10" value="3" step="1" oninput="updatePatternSetting('rotations', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">Start Radius: <span id="spiral-startRadius-value">0mm</span></label>
+                <input type="range" min="0" max="50" value="0" step="5" oninput="updatePatternSetting('startRadius', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 13px; color: #aaa;">End Radius: <span id="spiral-endRadius-value">80mm</span></label>
+                <input type="range" min="20" max="200" value="80" step="5" oninput="updatePatternSetting('endRadius', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+            <div>
+                <label style="font-size: 13px; color: #aaa;">Height: <span id="spiral-height-value">0mm</span></label>
+                <input type="range" min="0" max="200" value="0" step="10" oninput="updatePatternSetting('height', this.value)" style="width: 100%; margin-top: 4px;">
+            </div>
+        </div>
+
+        <!-- Auto-Merge Option -->
+        <div style="margin: 16px 0; padding: 12px; background: rgba(102, 126, 234, 0.1); border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.3);">
+            <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px;">
+                <input type="checkbox" id="auto-merge-checkbox" onchange="toggleAutoMerge()" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                <span style="flex: 1;">
+                    <strong>Merge into single shape</strong>
+                    <div style="font-size: 11px; color: #aaa; margin-top: 4px;">
+                        Automatically combines all shapes using Union (great for spirals!)
+                    </div>
+                </span>
+            </label>
+        </div>
+
+        <!-- Preview Info -->
+        <div id="pattern-preview-info" style="margin: 20px 0;"></div>
+
+        <!-- Create Button -->
+        <button id="create-pattern-btn" onclick="createPatternClick()" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 4px; color: #fff; font-size: 15px; font-weight: bold; cursor: pointer;">Create Pattern</button>
+    </div>
+
+    <!-- Mirror Modal -->
+    <div id="mirror-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(102, 126, 234, 0.5); border-radius: 12px; padding: 30px; min-width: 400px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);">
+            <h2 style="margin: 0 0 20px 0; color: #fff; font-size: 24px; text-align: center;">Mirror Object</h2>
+            <p style="color: #aaa; font-size: 14px; text-align: center; margin-bottom: 25px;">Choose an axis to mirror across:</p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button onclick="mirrorObject('x')" style="padding: 15px 20px; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); border: 2px solid #c0392b; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;">Mirror X-Axis (Left/Right)<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Shift+X</div></button>
+                <button onclick="mirrorObject('y')" style="padding: 15px 20px; background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); border: 2px solid #27ae60; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;">Mirror Y-Axis (Front/Back)<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Shift+Y</div></button>
+                <button onclick="mirrorObject('z')" style="padding: 15px 20px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border: 2px solid #2980b9; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;">Mirror Z-Axis (Up/Down)<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Shift+Z</div></button>
+            </div>
+            <button onclick="closeMirrorModal()" style="margin-top: 20px; width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 14px; cursor: pointer;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Text Creation Modal -->
+    <div id="text-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(102, 126, 234, 0.5); border-radius: 12px; padding: 30px; min-width: 450px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);">
+            <h2 style="margin: 0 0 15px 0; color: #fff; font-size: 24px; text-align: center;">Create 3D Text</h2>
+            <div style="background: rgba(255, 152, 0, 0.15); border: 1px solid rgba(255, 152, 0, 0.4); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                <div style="color: #ffb74d; font-size: 13px; line-height: 1.5; text-align: center;">
+                    <strong>Experimental Feature</strong><br>
+                    <span style="font-size: 12px; color: #ddd;">3D text is experimental and may not work correctly with all operations.</span>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Text to create:</label>
+                <input type="text" id="text-input" placeholder="Enter text..." maxlength="20" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box;" value="TEXT">
+                <div style="font-size: 11px; color: #888; margin-top: 5px;">Maximum 20 characters. Supported: a-z A-Z 0-9 . , - _</div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Font:</label>
+                <select id="text-font" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; cursor: pointer;">
+                    <optgroup label="Default Fonts" style="background: #2a2a3e; color: white;">
+                        <option value="Roboto-Regular.ttf" style="background: #2a2a3e; color: white;">Roboto</option>
+                    </optgroup>
+                    <optgroup label="Sans Serif" style="background: #2a2a3e; color: white;">
+                        <option value="DejaVuSans.ttf" style="background: #2a2a3e; color: white;">DejaVu Sans</option>
+                        <option value="DejaVuSans-Bold.ttf" style="background: #2a2a3e; color: white;">DejaVu Sans Bold</option>
+                    </optgroup>
+                    <optgroup label="Monospace" style="background: #2a2a3e; color: white;">
+                        <option value="DejaVuSansMono.ttf" style="background: #2a2a3e; color: white;">DejaVu Mono</option>
+                        <option value="DejaVuSansMono-Bold.ttf" style="background: #2a2a3e; color: white;">DejaVu Mono Bold</option>
+                    </optgroup>
+                    <optgroup label="Serif" style="background: #2a2a3e; color: white;">
+                        <option value="DejaVuSerif.ttf" style="background: #2a2a3e; color: white;">DejaVu Serif</option>
+                        <option value="DejaVuSerif-Bold.ttf" style="background: #2a2a3e; color: white;">DejaVu Serif Bold</option>
+                    </optgroup>
+                    <optgroup id="custom-fonts-group" label="My Custom Fonts" style="background: #2a2a3e; color: white; display: none;"></optgroup>
+                </select>
+                <div style="font-size: 11px; color: #888; margin-top: 5px;">Want more fonts? Add your own from a public URL below!</div>
+                <div id="custom-fonts-list" style="margin-top: 10px; display: none;">
+                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px;">Your Custom Fonts:</div>
+                    <div id="custom-fonts-items" style="max-height: 100px; overflow-y: auto; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 6px;"></div>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Add Custom Font from URL:</label>
+                <div style="display: flex; gap: 8px; align-items: stretch;">
+                    <input type="text" id="custom-font-url" placeholder="https://example.com/myfont.ttf" style="flex: 1; padding: 10px 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 14px; box-sizing: border-box;">
+                    <button onclick="addCustomFont()" style="padding: 8px 16px; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap;">Add Font</button>
+                </div>
+                <div style="font-size: 11px; color: #888; margin-top: 5px;">Paste a public link to a .ttf font file</div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Font Size: <span id="text-size-value">10mm</span></label>
+                <input type="range" id="text-size" min="5" max="50" value="10" step="1" oninput="document.getElementById('text-size-value').textContent = this.value + 'mm'" style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 25px;">
+                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Thickness: <span id="text-depth-value">3mm</span></label>
+                <input type="range" id="text-depth" min="1" max="20" value="3" step="1" oninput="document.getElementById('text-depth-value').textContent = this.value + 'mm'" style="width: 100%;">
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="createTextShape()" style="flex: 1; padding: 15px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 2px solid #764ba2; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;" title="Text features are experimental">Create Text (Experimental)</button>
+                <button onclick="closeTextModal()" style="flex: 1; padding: 15px 20px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 16px; cursor: pointer;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules (loaded in dependency order) -->
+    <script src="js/config.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/size-handles.js"></script>
+    <script src="js/transforms.js"></script>
+    <script src="js/shapes.js"></script>
+    <script src="js/properties.js"></script>
+    <script src="js/selection.js"></script>
+    <script src="js/align.js"></script>
+    <script src="js/csg-operations.js"></script>
+    <script src="js/pattern.js"></script>
+    <script src="js/scene.js"></script>
+    <script src="js/orientation-gizmo.js"></script>
+    <script src="js/project-io.js"></script>
+    <script src="js/keyboard.js"></script>
+    <script src="js/init.js"></script>
+</body>
+</html>
