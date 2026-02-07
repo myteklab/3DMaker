@@ -471,6 +471,13 @@ function initScene() {
     };
 
     // Don't save initial empty state - first user action will be the first history entry
+    // Expose globals for platform adapter (let declarations don't create window properties)
+    window.engine = engine;
+    window.camera = camera;
+    window.gizmoManager = gizmoManager;
+    window.workplaneElements = workplaneElements;
+    window.workplaneVisible = workplaneVisible;
+
     sceneReady = true;
     console.log('3DMaker scene initialized successfully');
 }
