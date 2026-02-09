@@ -67,7 +67,7 @@
 
         <!-- Center - 3D Viewport -->
         <div id="viewport-container">
-            <canvas id="renderCanvas" style="background: #0f0f1e;"></canvas>
+            <canvas id="renderCanvas" style="background: #1a1a1a;">
             <div id="viewport-info">
                 Left-click: Rotate | Middle-click: Pan | Scroll: Zoom<br>
                 Build platform: 200x200mm | Grid: 10mm squares
@@ -177,7 +177,7 @@
 
             <!-- Pattern Builder Button -->
             <div class="tool-section">
-                <button class="menu-btn" onclick="openPatternBuilder()" style="width: 100%; padding: 12px; font-size: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <button class="menu-btn" onclick="openPatternBuilder()" style="width: 100%; padding: 10px; font-size: 13px; background: #4a9eff; color: #fff; border-color: #4a9eff;">
                     Create Pattern
                 </button>
                 <div style="font-size: 11px; color: #888; margin-top: 8px; text-align: center;">
@@ -191,23 +191,23 @@
                 <div class="csg-buttons">
                     <button class="csg-btn" id="union-btn" onclick="performCSG('union')" disabled>
                         <svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
-                            <circle cx="18" cy="24" r="10" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
-                            <circle cx="30" cy="24" r="10" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
+                            <circle cx="18" cy="24" r="10" fill="rgba(74, 158, 255, 0.2)" stroke="#4a9eff"/>
+                            <circle cx="30" cy="24" r="10" fill="rgba(74, 158, 255, 0.2)" stroke="#4a9eff"/>
                         </svg>
                         <span>Union</span>
                     </button>
                     <button class="csg-btn" id="subtract-btn" onclick="performCSG('subtract')" disabled>
                         <svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
-                            <circle cx="20" cy="24" r="12" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
-                            <circle cx="28" cy="24" r="8" fill="none" stroke="#667eea" stroke-dasharray="3,3"/>
+                            <circle cx="20" cy="24" r="12" fill="rgba(74, 158, 255, 0.2)" stroke="#4a9eff"/>
+                            <circle cx="28" cy="24" r="8" fill="none" stroke="#4a9eff" stroke-dasharray="3,3"/>
                         </svg>
                         <span>Subtract</span>
                     </button>
                     <button class="csg-btn" id="intersect-btn" onclick="performCSG('intersect')" disabled>
                         <svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
-                            <circle cx="18" cy="24" r="10" fill="none" stroke="#667eea" stroke-dasharray="3,3" opacity="0.4"/>
-                            <circle cx="30" cy="24" r="10" fill="none" stroke="#667eea" stroke-dasharray="3,3" opacity="0.4"/>
-                            <ellipse cx="24" cy="24" rx="4" ry="10" fill="rgba(102, 126, 234, 0.6)" stroke="#667eea"/>
+                            <circle cx="18" cy="24" r="10" fill="none" stroke="#4a9eff" stroke-dasharray="3,3" opacity="0.4"/>
+                            <circle cx="30" cy="24" r="10" fill="none" stroke="#4a9eff" stroke-dasharray="3,3" opacity="0.4"/>
+                            <ellipse cx="24" cy="24" rx="4" ry="10" fill="rgba(74, 158, 255, 0.4)" stroke="#4a9eff"/>
                         </svg>
                         <span>Intersect</span>
                     </button>
@@ -270,33 +270,34 @@
     <style>
         .pattern-type-btn {
             flex: 1;
-            padding: 10px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 4px;
-            color: #fff;
+            padding: 8px;
+            background: #2d2d2d;
+            border: 1px solid #3a3a3a;
+            border-radius: 3px;
+            color: #ccc;
             cursor: pointer;
             font-size: 11px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
+            gap: 5px;
+            transition: all 0.15s ease;
         }
 
         .pattern-type-btn:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(102, 126, 234, 0.3);
+            background: #353535;
+            border-color: #4a4a4a;
         }
 
         .pattern-type-btn.active {
-            background: rgba(102, 126, 234, 0.3);
-            border: 1px solid rgba(102, 126, 234, 0.5);
+            background: rgba(74, 158, 255, 0.15);
+            border: 1px solid #4a9eff;
+            color: #fff;
         }
     </style>
 
     <!-- Pattern Builder Panel (Hidden by default) -->
-    <div id="pattern-panel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(102, 126, 234, 0.5); border-radius: 12px; padding: 24px; width: 400px; max-width: 90vw; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
+    <div id="pattern-panel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 6px; padding: 20px; width: 400px; max-width: 90vw; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,0.6);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0; font-size: 20px;">Pattern Builder</h2>
             <button onclick="closePatternBuilder()" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">x</button>
@@ -500,7 +501,7 @@
         </div>
 
         <!-- Auto-Merge Option -->
-        <div style="margin: 16px 0; padding: 12px; background: rgba(102, 126, 234, 0.1); border-radius: 6px; border: 1px solid rgba(102, 126, 234, 0.3);">
+        <div style="margin: 14px 0; padding: 10px; background: #333; border-radius: 3px; border: 1px solid #3a3a3a;">
             <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px;">
                 <input type="checkbox" id="auto-merge-checkbox" onchange="toggleAutoMerge()" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
                 <span style="flex: 1;">
@@ -516,83 +517,83 @@
         <div id="pattern-preview-info" style="margin: 20px 0;"></div>
 
         <!-- Create Button -->
-        <button id="create-pattern-btn" onclick="createPatternClick()" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 4px; color: #fff; font-size: 15px; font-weight: bold; cursor: pointer;">Create Pattern</button>
+        <button id="create-pattern-btn" onclick="createPatternClick()" style="width: 100%; padding: 12px; background: #4a9eff; border: none; border-radius: 3px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;">Create Pattern</button>
     </div>
 
     <!-- Mirror Modal -->
-    <div id="mirror-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
-        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(102, 126, 234, 0.5); border-radius: 12px; padding: 30px; min-width: 400px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);">
-            <h2 style="margin: 0 0 20px 0; color: #fff; font-size: 24px; text-align: center;">Mirror Object</h2>
-            <p style="color: #aaa; font-size: 14px; text-align: center; margin-bottom: 25px;">Choose an axis to mirror across:</p>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <button onclick="mirrorObject('x')" style="padding: 15px 20px; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); border: 2px solid #c0392b; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;">Mirror X-Axis (Left/Right)<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Shift+X</div></button>
-                <button onclick="mirrorObject('y')" style="padding: 15px 20px; background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); border: 2px solid #27ae60; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;">Mirror Y-Axis (Front/Back)<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Shift+Y</div></button>
-                <button onclick="mirrorObject('z')" style="padding: 15px 20px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border: 2px solid #2980b9; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;">Mirror Z-Axis (Up/Down)<div style="font-size: 11px; opacity: 0.8; margin-top: 5px;">Shift+Z</div></button>
+    <div id="mirror-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 6px; padding: 24px; min-width: 380px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);">
+            <h2 style="margin: 0 0 16px 0; color: #d4d4d4; font-size: 18px; text-align: center;">Mirror Object</h2>
+            <p style="color: #888; font-size: 13px; text-align: center; margin-bottom: 20px;">Choose an axis to mirror across:</p>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button onclick="mirrorObject('x')" style="padding: 12px 16px; background: #c0392b; border: none; border-radius: 3px; color: white; font-size: 14px; font-weight: 600; cursor: pointer;">Mirror X-Axis (Left/Right)<div style="font-size: 10px; opacity: 0.7; margin-top: 4px;">Shift+X</div></button>
+                <button onclick="mirrorObject('y')" style="padding: 12px 16px; background: #27ae60; border: none; border-radius: 3px; color: white; font-size: 14px; font-weight: 600; cursor: pointer;">Mirror Y-Axis (Front/Back)<div style="font-size: 10px; opacity: 0.7; margin-top: 4px;">Shift+Y</div></button>
+                <button onclick="mirrorObject('z')" style="padding: 12px 16px; background: #2980b9; border: none; border-radius: 3px; color: white; font-size: 14px; font-weight: 600; cursor: pointer;">Mirror Z-Axis (Up/Down)<div style="font-size: 10px; opacity: 0.7; margin-top: 4px;">Shift+Z</div></button>
             </div>
-            <button onclick="closeMirrorModal()" style="margin-top: 20px; width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 14px; cursor: pointer;">Cancel</button>
+            <button onclick="closeMirrorModal()" style="margin-top: 16px; width: 100%; padding: 10px; background: #3c3c3c; border: 1px solid #4a4a4a; border-radius: 3px; color: #ccc; font-size: 13px; cursor: pointer;">Cancel</button>
         </div>
     </div>
 
     <!-- Text Creation Modal -->
-    <div id="text-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
-        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(102, 126, 234, 0.5); border-radius: 12px; padding: 30px; min-width: 450px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);">
-            <h2 style="margin: 0 0 15px 0; color: #fff; font-size: 24px; text-align: center;">Create 3D Text</h2>
-            <div style="background: rgba(255, 152, 0, 0.15); border: 1px solid rgba(255, 152, 0, 0.4); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-                <div style="color: #ffb74d; font-size: 13px; line-height: 1.5; text-align: center;">
+    <div id="text-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 6px; padding: 24px; min-width: 430px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);">
+            <h2 style="margin: 0 0 12px 0; color: #d4d4d4; font-size: 18px; text-align: center;">Create 3D Text</h2>
+            <div style="background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.3); border-radius: 3px; padding: 10px; margin-bottom: 16px;">
+                <div style="color: #e0a050; font-size: 12px; line-height: 1.4; text-align: center;">
                     <strong>Experimental Feature</strong><br>
-                    <span style="font-size: 12px; color: #ddd;">3D text is experimental and may not work correctly with all operations.</span>
+                    <span style="font-size: 11px; color: #aaa;">3D text may not work correctly with all operations.</span>
                 </div>
             </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Text to create:</label>
-                <input type="text" id="text-input" placeholder="Enter text..." maxlength="20" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box;" value="TEXT">
-                <div style="font-size: 11px; color: #888; margin-top: 5px;">Maximum 20 characters. Supported: a-z A-Z 0-9 . , - _</div>
+            <div style="margin-bottom: 16px;">
+                <label style="color: #888; font-size: 12px; display: block; margin-bottom: 6px;">Text to create:</label>
+                <input type="text" id="text-input" placeholder="Enter text..." maxlength="20" style="width: 100%; padding: 10px; background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 3px; color: #d4d4d4; font-size: 14px; box-sizing: border-box;" value="TEXT">
+                <div style="font-size: 10px; color: #666; margin-top: 4px;">Maximum 20 characters. Supported: a-z A-Z 0-9 . , - _</div>
             </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Font:</label>
-                <select id="text-font" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; cursor: pointer;">
-                    <optgroup label="Default Fonts" style="background: #2a2a3e; color: white;">
-                        <option value="Roboto-Regular.ttf" style="background: #2a2a3e; color: white;">Roboto</option>
+            <div style="margin-bottom: 16px;">
+                <label style="color: #888; font-size: 12px; display: block; margin-bottom: 6px;">Font:</label>
+                <select id="text-font" style="width: 100%; padding: 10px; background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 3px; color: #d4d4d4; font-size: 14px; box-sizing: border-box; cursor: pointer;">
+                    <optgroup label="Default Fonts" style="background: #2a2a2a; color: #d4d4d4;">
+                        <option value="Roboto-Regular.ttf" style="background: #2a2a2a; color: #d4d4d4;">Roboto</option>
                     </optgroup>
-                    <optgroup label="Sans Serif" style="background: #2a2a3e; color: white;">
-                        <option value="DejaVuSans.ttf" style="background: #2a2a3e; color: white;">DejaVu Sans</option>
-                        <option value="DejaVuSans-Bold.ttf" style="background: #2a2a3e; color: white;">DejaVu Sans Bold</option>
+                    <optgroup label="Sans Serif" style="background: #2a2a2a; color: #d4d4d4;">
+                        <option value="DejaVuSans.ttf" style="background: #2a2a2a; color: #d4d4d4;">DejaVu Sans</option>
+                        <option value="DejaVuSans-Bold.ttf" style="background: #2a2a2a; color: #d4d4d4;">DejaVu Sans Bold</option>
                     </optgroup>
-                    <optgroup label="Monospace" style="background: #2a2a3e; color: white;">
-                        <option value="DejaVuSansMono.ttf" style="background: #2a2a3e; color: white;">DejaVu Mono</option>
-                        <option value="DejaVuSansMono-Bold.ttf" style="background: #2a2a3e; color: white;">DejaVu Mono Bold</option>
+                    <optgroup label="Monospace" style="background: #2a2a2a; color: #d4d4d4;">
+                        <option value="DejaVuSansMono.ttf" style="background: #2a2a2a; color: #d4d4d4;">DejaVu Mono</option>
+                        <option value="DejaVuSansMono-Bold.ttf" style="background: #2a2a2a; color: #d4d4d4;">DejaVu Mono Bold</option>
                     </optgroup>
-                    <optgroup label="Serif" style="background: #2a2a3e; color: white;">
-                        <option value="DejaVuSerif.ttf" style="background: #2a2a3e; color: white;">DejaVu Serif</option>
-                        <option value="DejaVuSerif-Bold.ttf" style="background: #2a2a3e; color: white;">DejaVu Serif Bold</option>
+                    <optgroup label="Serif" style="background: #2a2a2a; color: #d4d4d4;">
+                        <option value="DejaVuSerif.ttf" style="background: #2a2a2a; color: #d4d4d4;">DejaVu Serif</option>
+                        <option value="DejaVuSerif-Bold.ttf" style="background: #2a2a2a; color: #d4d4d4;">DejaVu Serif Bold</option>
                     </optgroup>
-                    <optgroup id="custom-fonts-group" label="My Custom Fonts" style="background: #2a2a3e; color: white; display: none;"></optgroup>
+                    <optgroup id="custom-fonts-group" label="My Custom Fonts" style="background: #2a2a2a; color: #d4d4d4; display: none;"></optgroup>
                 </select>
-                <div style="font-size: 11px; color: #888; margin-top: 5px;">Want more fonts? Add your own from a public URL below!</div>
-                <div id="custom-fonts-list" style="margin-top: 10px; display: none;">
-                    <div style="font-size: 12px; color: #aaa; margin-bottom: 5px;">Your Custom Fonts:</div>
-                    <div id="custom-fonts-items" style="max-height: 100px; overflow-y: auto; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 6px;"></div>
+                <div style="font-size: 10px; color: #666; margin-top: 4px;">Want more fonts? Add your own from a public URL below!</div>
+                <div id="custom-fonts-list" style="margin-top: 8px; display: none;">
+                    <div style="font-size: 11px; color: #888; margin-bottom: 4px;">Your Custom Fonts:</div>
+                    <div id="custom-fonts-items" style="max-height: 100px; overflow-y: auto; background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 3px; padding: 6px;"></div>
                 </div>
             </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Add Custom Font from URL:</label>
-                <div style="display: flex; gap: 8px; align-items: stretch;">
-                    <input type="text" id="custom-font-url" placeholder="https://example.com/myfont.ttf" style="flex: 1; padding: 10px 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 14px; box-sizing: border-box;">
-                    <button onclick="addCustomFont()" style="padding: 8px 16px; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap;">Add Font</button>
+            <div style="margin-bottom: 16px;">
+                <label style="color: #888; font-size: 12px; display: block; margin-bottom: 6px;">Add Custom Font from URL:</label>
+                <div style="display: flex; gap: 6px; align-items: stretch;">
+                    <input type="text" id="custom-font-url" placeholder="https://example.com/myfont.ttf" style="flex: 1; padding: 8px 10px; background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 3px; color: #d4d4d4; font-size: 13px; box-sizing: border-box;">
+                    <button onclick="addCustomFont()" style="padding: 8px 14px; background: #27ae60; border: none; border-radius: 3px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;">Add Font</button>
                 </div>
-                <div style="font-size: 11px; color: #888; margin-top: 5px;">Paste a public link to a .ttf font file</div>
+                <div style="font-size: 10px; color: #666; margin-top: 4px;">Paste a public link to a .ttf font file</div>
             </div>
-            <div style="margin-bottom: 20px;">
-                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Font Size: <span id="text-size-value">10mm</span></label>
+            <div style="margin-bottom: 16px;">
+                <label style="color: #888; font-size: 12px; display: block; margin-bottom: 6px;">Font Size: <span id="text-size-value">10mm</span></label>
                 <input type="range" id="text-size" min="5" max="50" value="10" step="1" oninput="document.getElementById('text-size-value').textContent = this.value + 'mm'" style="width: 100%;">
             </div>
-            <div style="margin-bottom: 25px;">
-                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">Thickness: <span id="text-depth-value">3mm</span></label>
+            <div style="margin-bottom: 20px;">
+                <label style="color: #888; font-size: 12px; display: block; margin-bottom: 6px;">Thickness: <span id="text-depth-value">3mm</span></label>
                 <input type="range" id="text-depth" min="1" max="20" value="3" step="1" oninput="document.getElementById('text-depth-value').textContent = this.value + 'mm'" style="width: 100%;">
             </div>
-            <div style="display: flex; gap: 12px;">
-                <button onclick="createTextShape()" style="flex: 1; padding: 15px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 2px solid #764ba2; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer;" title="Text features are experimental">Create Text (Experimental)</button>
-                <button onclick="closeTextModal()" style="flex: 1; padding: 15px 20px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 16px; cursor: pointer;">Cancel</button>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="createTextShape()" style="flex: 1; padding: 12px 16px; background: #4a9eff; border: none; border-radius: 3px; color: white; font-size: 14px; font-weight: 600; cursor: pointer;" title="Text features are experimental">Create Text</button>
+                <button onclick="closeTextModal()" style="flex: 1; padding: 12px 16px; background: #3c3c3c; border: 1px solid #4a4a4a; border-radius: 3px; color: #ccc; font-size: 14px; cursor: pointer;">Cancel</button>
             </div>
         </div>
     </div>

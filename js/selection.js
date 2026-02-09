@@ -26,9 +26,9 @@ function updateObjectsList() {
     let headerHtml = '';
     if (selectedObjects.length > 1) {
         headerHtml = `
-            <div style="padding: 8px; background: #1a1a2e; border-bottom: 1px solid #2a2a4e; display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 6px 10px; background: #2a2a2a; border-bottom: 1px solid #3a3a3a; display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 11px; color: #888;">${selectedObjects.length} shapes selected</span>
-                <button onclick="deselectAll()" style="background: #667eea; border: none; color: white; padding: 4px 12px; border-radius: 3px; cursor: pointer; font-size: 11px;">Clear Selection</button>
+                <button onclick="deselectAll()" style="background: #4a9eff; border: none; color: white; padding: 3px 10px; border-radius: 2px; cursor: pointer; font-size: 11px;">Clear Selection</button>
             </div>
         `;
     }
@@ -36,7 +36,7 @@ function updateObjectsList() {
     const itemsHtml = objects.map(obj => {
         const selectionIndex = selectedObjects.indexOf(obj);
         const isSelected = selectionIndex > -1;
-        const colors = ['#667eea', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
+        const colors = ['#4a9eff', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
         const badgeColor = isSelected ? colors[selectionIndex % colors.length] : '';
 
         // Multi-select checkbox
@@ -156,7 +156,7 @@ function updateSelectionLabels() {
     // Show labels when 2+ objects are selected
     if (selectedObjects.length >= 2) {
         const colors = [
-            { bg: '#667eea', text: '#ffffff' }, // Purple
+            { bg: '#4a9eff', text: '#ffffff' }, // Blue
             { bg: '#f59e0b', text: '#ffffff' }, // Orange
             { bg: '#10b981', text: '#ffffff' }, // Green
             { bg: '#ef4444', text: '#ffffff' }, // Red

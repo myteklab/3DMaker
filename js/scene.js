@@ -6,7 +6,7 @@ function initScene() {
     canvas = document.getElementById('renderCanvas');
     engine = new BABYLON.Engine(canvas, true);
     scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color4(0.06, 0.06, 0.12, 1);
+    scene.clearColor = new BABYLON.Color4(0.10, 0.10, 0.10, 1);
 
     // Use right-handed coordinate system with Z-up for proper 3D printing orientation
     // This gives us: X+ right, Y+ back, Z+ up

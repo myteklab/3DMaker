@@ -62,19 +62,19 @@ function updateCSGButtons() {
 
     // SVG icon templates
     const unionIcon = `<svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
-        <circle cx="18" cy="24" r="10" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
-        <circle cx="30" cy="24" r="10" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
+        <circle cx="18" cy="24" r="10" fill="rgba(74, 158, 255, 0.2)" stroke="#4a9eff"/>
+        <circle cx="30" cy="24" r="10" fill="rgba(74, 158, 255, 0.2)" stroke="#4a9eff"/>
     </svg>`;
 
     const subtractIcon = `<svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
-        <circle cx="20" cy="24" r="12" fill="rgba(102, 126, 234, 0.3)" stroke="#667eea"/>
-        <circle cx="28" cy="24" r="8" fill="none" stroke="#667eea" stroke-dasharray="3,3"/>
+        <circle cx="20" cy="24" r="12" fill="rgba(74, 158, 255, 0.2)" stroke="#4a9eff"/>
+        <circle cx="28" cy="24" r="8" fill="none" stroke="#4a9eff" stroke-dasharray="3,3"/>
     </svg>`;
 
     const intersectIcon = `<svg class="csg-icon" viewBox="0 0 48 48" stroke="currentColor" stroke-width="2.5">
-        <circle cx="18" cy="24" r="10" fill="none" stroke="#667eea" stroke-dasharray="3,3" opacity="0.4"/>
-        <circle cx="30" cy="24" r="10" fill="none" stroke="#667eea" stroke-dasharray="3,3" opacity="0.4"/>
-        <ellipse cx="24" cy="24" rx="4" ry="10" fill="rgba(102, 126, 234, 0.6)" stroke="#667eea"/>
+        <circle cx="18" cy="24" r="10" fill="none" stroke="#4a9eff" stroke-dasharray="3,3" opacity="0.4"/>
+        <circle cx="30" cy="24" r="10" fill="none" stroke="#4a9eff" stroke-dasharray="3,3" opacity="0.4"/>
+        <ellipse cx="24" cy="24" rx="4" ry="10" fill="rgba(74, 158, 255, 0.4)" stroke="#4a9eff"/>
     </svg>`;
 
     if (enabled) {

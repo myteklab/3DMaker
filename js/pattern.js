@@ -482,10 +482,10 @@ function showConfirmDialog(title, message, onConfirm) {
 
     dialog.innerHTML = `
         <div style="
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            border-radius: 8px;
-            padding: 24px;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            padding: 20px;
             max-width: 400px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
             animation: slideIn 0.3s ease;
@@ -508,7 +508,7 @@ function showConfirmDialog(title, message, onConfirm) {
                 ">Cancel</button>
                 <button id="confirm-yes-btn" style="
                     padding: 10px 20px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: #4a9eff;
                     border: none;
                     border-radius: 4px;
                     color: #fff;

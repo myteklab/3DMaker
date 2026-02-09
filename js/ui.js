@@ -29,15 +29,9 @@ function toggleSnapToGrid() {
 
     const btn = document.getElementById('snap-to-grid-btn');
     if (snapToGrid) {
-        btn.style.background = 'rgba(255,255,255,0.4)';
-        btn.style.border = '2px solid rgba(255,255,255,0.6)';
-        btn.style.boxShadow = '0 0 15px rgba(102, 126, 234, 0.5)';
         btn.classList.add('active');
-        showToast('🧲 Snap to Grid enabled (10mm, or hold Shift for 1mm)');
+        showToast('Snap to Grid enabled (10mm, hold Shift for 1mm)');
     } else {
-        btn.style.background = 'rgba(255,255,255,0.2)';
-        btn.style.border = 'none';
-        btn.style.boxShadow = 'none';
         btn.classList.remove('active');
         showToast('Snap to Grid disabled');
     }
@@ -120,10 +114,6 @@ function loadSnapPreference() {
         snapToGrid = saved === 'true';
         const btn = document.getElementById('snap-to-grid-btn');
         if (btn && snapToGrid) {
-            // Apply active state without showing toast
-            btn.style.background = 'rgba(255,255,255,0.4)';
-            btn.style.border = '2px solid rgba(255,255,255,0.6)';
-            btn.style.boxShadow = '0 0 15px rgba(102, 126, 234, 0.5)';
             btn.classList.add('active');
         }
         // Update gizmo snap distance if scene is ready

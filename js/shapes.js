@@ -1402,8 +1402,8 @@ function loadCustomFonts() {
                 justify-content: space-between;
                 padding: 4px 8px;
                 margin-bottom: 4px;
-                background: rgba(102, 126, 234, 0.1);
-                border: 1px solid rgba(102, 126, 234, 0.3);
+                background: rgba(74, 158, 255, 0.08);
+                border: 1px solid rgba(74, 158, 255, 0.2);
                 border-radius: 4px;
                 font-size: 12px;
                 color: #fff;
