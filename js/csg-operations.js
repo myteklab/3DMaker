@@ -101,6 +101,194 @@ function updateCSGButtons() {
 }
 
 
+// Create a temporary mesh from stored operand data for CSG tree rebuilding.
+// Returns a bare mesh (no material) — caller must dispose when done.
+function _createTempMeshForCSG(data) {
+    let mesh;
+
+    if (data.geometry) {
+        mesh = new BABYLON.Mesh('csg_temp', scene);
+        const vertexData = new BABYLON.VertexData();
+        vertexData.positions = data.geometry.positions;
+        vertexData.indices = data.geometry.indices;
+        vertexData.normals = data.geometry.normals;
+        vertexData.applyToMesh(mesh);
+    } else {
+        const dims = data.dimensions || {};
+        switch (data.type) {
+            case 'box': {
+                mesh = BABYLON.MeshBuilder.CreateBox('csg_temp', {
+                    width: (dims.width || 20) * UNIT_SCALE,
+                    depth: (dims.depth || 20) * UNIT_SCALE,
+                    height: (dims.height || 20) * UNIT_SCALE
+                }, scene);
+                break;
+            }
+            case 'sphere': {
+                mesh = BABYLON.MeshBuilder.CreateSphere('csg_temp', {
+                    diameter: (dims.radius || 10) * 2 * UNIT_SCALE,
+                    segments: dims.quality || 32
+                }, scene);
+                break;
+            }
+            case 'cylinder': {
+                mesh = BABYLON.MeshBuilder.CreateCylinder('csg_temp', {
+                    height: (dims.height || 20) * UNIT_SCALE,
+                    diameterTop: (dims.radius || 10) * 2 * UNIT_SCALE,
+                    diameterBottom: (dims.radius || 10) * 2 * UNIT_SCALE,
+                    tessellation: dims.quality || 32
+                }, scene);
+                mesh.rotation.x = Math.PI / 2;
+                break;
+            }
+            case 'cone': {
+                const coneTopR = (dims.topRadius !== undefined ? dims.topRadius : 0);
+                const coneBotR = (dims.bottomRadius !== undefined ? dims.bottomRadius : (dims.radius || 10));
+                mesh = BABYLON.MeshBuilder.CreateCylinder('csg_temp', {
+                    height: (dims.height || 20) * UNIT_SCALE,
+                    diameterTop: coneTopR * 2 * UNIT_SCALE,
+                    diameterBottom: coneBotR * 2 * UNIT_SCALE,
+                    tessellation: dims.quality || 32
+                }, scene);
+                mesh.rotation.x = Math.PI / 2;
+                break;
+            }
+            case 'torus': {
+                mesh = BABYLON.MeshBuilder.CreateTorus('csg_temp', {
+                    diameter: (dims.diameter || 20) * UNIT_SCALE,
+                    thickness: (dims.thickness || 4) * UNIT_SCALE,
+                    tessellation: dims.quality || 32
+                }, scene);
+                mesh.rotation.x = Math.PI / 2;
+                break;
+            }
+            case 'pyramid': {
+                mesh = BABYLON.MeshBuilder.CreateCylinder('csg_temp', {
+                    height: (dims.height || 20) * UNIT_SCALE,
+                    diameterTop: 0,
+                    diameterBottom: (dims.baseSize || 20) * UNIT_SCALE * 1.4142,
+                    tessellation: 4
+                }, scene);
+                mesh.rotation.x = Math.PI / 2;
+                mesh.rotation.z = Math.PI / 4;
+                break;
+            }
+            case 'capsule': {
+                mesh = BABYLON.MeshBuilder.CreateCapsule('csg_temp', {
+                    radius: (dims.radius || 5) * UNIT_SCALE,
+                    height: (dims.height || 20) * UNIT_SCALE,
+                    tessellation: dims.quality || 16
+                }, scene);
+                mesh.rotation.x = Math.PI / 2;
+                break;
+            }
+            case 'tube': {
+                const outerCyl = BABYLON.MeshBuilder.CreateCylinder('csg_outer', {
+                    height: (dims.height || 20) * UNIT_SCALE,
+                    diameter: (dims.outerRadius || 10) * 2 * UNIT_SCALE,
+                    tessellation: dims.quality || 32
+                }, scene);
+                const innerCyl = BABYLON.MeshBuilder.CreateCylinder('csg_inner', {
+                    height: (dims.height || 20) * UNIT_SCALE * 1.1,
+                    diameter: (dims.innerRadius || 6) * 2 * UNIT_SCALE,
+                    tessellation: dims.quality || 32
+                }, scene);
+                const outerC = BABYLON.CSG.FromMesh(outerCyl);
+                const innerC = BABYLON.CSG.FromMesh(innerCyl);
+                const tubeC = outerC.subtract(innerC);
+                mesh = tubeC.toMesh('csg_temp', null, scene);
+                outerCyl.dispose();
+                innerCyl.dispose();
+                mesh.rotation.x = Math.PI / 2;
+                break;
+            }
+            default: {
+                mesh = BABYLON.MeshBuilder.CreateBox('csg_temp', { size: 0.1 }, scene);
+                break;
+            }
+        }
+    }
+
+    // Apply stored transforms
+    mesh.position = new BABYLON.Vector3(data.position.x, data.position.y, data.position.z);
+    mesh.rotation = new BABYLON.Vector3(data.rotation.x, data.rotation.y, data.rotation.z);
+    if (data.scaling && !data.geometry) {
+        mesh.scaling = new BABYLON.Vector3(data.scaling.x, data.scaling.y, data.scaling.z);
+    }
+
+    return mesh;
+}
+
+// Build a BABYLON.CSG from an object. For CSG results with stored operands,
+// reconstructs the CSG tree from the original primitives to avoid BSP tree
+// corruption that occurs when composite meshes are round-tripped through FromMesh.
+function buildCSGForObject(obj) {
+    if (obj.type !== 'csg' || !obj.operands || obj.operands.length < 2 || !obj.operation) {
+        return BABYLON.CSG.FromMesh(obj.mesh);
+    }
+
+    console.log('Rebuilding CSG from operand tree for:', obj.name);
+    const meshWorldMatrix = obj.mesh.computeWorldMatrix(true);
+    const tempMeshes = [];
+    try {
+        return _rebuildCSGTree(obj.operands, obj.operation, meshWorldMatrix, tempMeshes);
+    } finally {
+        tempMeshes.forEach(m => m.dispose());
+    }
+}
+
+// Recursively rebuild a CSG operation tree from stored operands
+function _rebuildCSGTree(operands, operation, parentWorldMatrix, tempMeshes) {
+    let result = _operandToCSG(operands[0], parentWorldMatrix, tempMeshes);
+    for (let i = 1; i < operands.length; i++) {
+        const nextCSG = _operandToCSG(operands[i], parentWorldMatrix, tempMeshes);
+        switch (operation) {
+            case 'union': result = result.union(nextCSG); break;
+            case 'subtract': result = result.subtract(nextCSG); break;
+            case 'intersect': result = result.intersect(nextCSG); break;
+        }
+    }
+    return result;
+}
+
+// Convert a single operand (data) to a BABYLON.CSG, recursing for nested CSG
+function _operandToCSG(data, parentWorldMatrix, tempMeshes) {
+    // Nested CSG with operands — recurse to rebuild from primitives
+    if (data.type === 'csg' && data.operands && data.operands.length >= 2 && data.operation) {
+        // This operand's stored position/rotation is its mesh transform at clone time.
+        // Compose with parent transform so nested operands end up in correct world space.
+        const pos = new BABYLON.Vector3(data.position.x, data.position.y, data.position.z);
+        const rot = BABYLON.Quaternion.FromEulerAngles(data.rotation.x, data.rotation.y, data.rotation.z);
+        const scl = data.scaling
+            ? new BABYLON.Vector3(data.scaling.x, data.scaling.y, data.scaling.z)
+            : BABYLON.Vector3.One();
+        const localMatrix = BABYLON.Matrix.Compose(scl, rot, pos);
+        const combinedMatrix = localMatrix.multiply(parentWorldMatrix);
+
+        return _rebuildCSGTree(data.operands, data.operation, combinedMatrix, tempMeshes);
+    }
+
+    // Leaf operand — create temp mesh and convert to CSG
+    const tempMesh = _createTempMeshForCSG(data);
+    tempMeshes.push(tempMesh);
+
+    // Bake the operand's own transform into vertices (puts them in original world space),
+    // then apply the parent CSG's world matrix so FromMesh positions them correctly.
+    tempMesh.computeWorldMatrix(true);
+    tempMesh.bakeCurrentTransformIntoVertices();
+
+    const scaling = new BABYLON.Vector3();
+    const rotation = new BABYLON.Quaternion();
+    const translation = new BABYLON.Vector3();
+    parentWorldMatrix.decompose(scaling, rotation, translation);
+    tempMesh.position = translation;
+    tempMesh.rotationQuaternion = rotation;
+    tempMesh.scaling = scaling;
+
+    return BABYLON.CSG.FromMesh(tempMesh);
+}
+
+
 function performCSG(operation) {
     if (selectedObjects.length < 2) {
         showToast('Select 2 or more objects', 'error');
@@ -121,12 +309,15 @@ function performCSG(operation) {
             });
         });
 
-        // Start with the first object as the base
-        let result = BABYLON.CSG.FromMesh(selectedObjects[0].mesh);
+        // Start with the first object as the base.
+        // Use buildCSGForObject so CSG results are rebuilt from their
+        // operand tree (clean primitives) instead of re-parsing the
+        // composite mesh, which avoids BSP tree corruption on nested ops.
+        let result = buildCSGForObject(selectedObjects[0]);
 
         // Apply operation with each subsequent object
         for (let i = 1; i < selectedObjects.length; i++) {
-            const nextCSG = BABYLON.CSG.FromMesh(selectedObjects[i].mesh);
+            const nextCSG = buildCSGForObject(selectedObjects[i]);
 
             switch(operation) {
                 case 'union':
@@ -298,6 +489,29 @@ function reverseCSG(csgId, event) {
                             height: capH,
                             tessellation: dims.quality || 16
                         }, scene);
+                        mesh.rotation.x = Math.PI / 2;
+                        break;
+                    case 'tube':
+                        const tubeOuterR = (dims.outerRadius || 10);
+                        const tubeInnerR = (dims.innerRadius || 6);
+                        const tubeH = (dims.height || 20);
+                        const tubeQuality = (dims.quality || 32);
+                        const outerCyl = BABYLON.MeshBuilder.CreateCylinder('outer', {
+                            height: tubeH * UNIT_SCALE,
+                            diameter: tubeOuterR * 2 * UNIT_SCALE,
+                            tessellation: tubeQuality
+                        }, scene);
+                        const innerCyl = BABYLON.MeshBuilder.CreateCylinder('inner', {
+                            height: tubeH * UNIT_SCALE * 1.1,
+                            diameter: tubeInnerR * 2 * UNIT_SCALE,
+                            tessellation: tubeQuality
+                        }, scene);
+                        const outerCSG = BABYLON.CSG.FromMesh(outerCyl);
+                        const innerCSG = BABYLON.CSG.FromMesh(innerCyl);
+                        const tubeCSG = outerCSG.subtract(innerCSG);
+                        mesh = tubeCSG.toMesh(`object_${objData.id}`, null, scene);
+                        outerCyl.dispose();
+                        innerCyl.dispose();
                         mesh.rotation.x = Math.PI / 2;
                         break;
                 }
