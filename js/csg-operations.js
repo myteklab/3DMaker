@@ -4,7 +4,10 @@
  */
 
 // Helper function to deep clone object data (without mesh references)
+// Handles both live objects (with .mesh) and already-cloned data objects
 function cloneObjectData(obj) {
+    const hasMesh = !!obj.mesh;
+
     return {
         id: obj.id,
         type: obj.type,
@@ -13,26 +16,30 @@ function cloneObjectData(obj) {
         opacity: obj.opacity !== undefined ? obj.opacity : 1.0,
         showEdges: obj.showEdges !== undefined ? obj.showEdges : false,
         dimensions: obj.dimensions ? { ...obj.dimensions } : null,
-        position: {
-            x: obj.mesh.position.x,
-            y: obj.mesh.position.y,
-            z: obj.mesh.position.z
-        },
-        rotation: {
-            x: obj.mesh.rotation.x,
-            y: obj.mesh.rotation.y,
-            z: obj.mesh.rotation.z
-        },
-        scaling: (obj.type === 'csg' || obj.type === 'text') ? {
-            x: obj.mesh.scaling.x,
-            y: obj.mesh.scaling.y,
-            z: obj.mesh.scaling.z
-        } : null,
-        geometry: (obj.type === 'csg' || obj.type === 'text') ? {
-            positions: Array.from(obj.mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind)).map(v => parseFloat(v.toFixed(4))),
-            indices: Array.from(obj.mesh.getIndices()),
-            normals: Array.from(obj.mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind)).map(v => parseFloat(v.toFixed(4)))
-        } : null,
+        position: hasMesh
+            ? { x: obj.mesh.position.x, y: obj.mesh.position.y, z: obj.mesh.position.z }
+            : { x: obj.position.x, y: obj.position.y, z: obj.position.z },
+        rotation: hasMesh
+            ? { x: obj.mesh.rotation.x, y: obj.mesh.rotation.y, z: obj.mesh.rotation.z }
+            : { x: obj.rotation.x, y: obj.rotation.y, z: obj.rotation.z },
+        scaling: (obj.type === 'csg' || obj.type === 'text') ? (
+            hasMesh
+                ? { x: obj.mesh.scaling.x, y: obj.mesh.scaling.y, z: obj.mesh.scaling.z }
+                : (obj.scaling ? { x: obj.scaling.x, y: obj.scaling.y, z: obj.scaling.z } : null)
+        ) : null,
+        geometry: (obj.type === 'csg' || obj.type === 'text') ? (
+            hasMesh
+                ? {
+                    positions: Array.from(obj.mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind)).map(v => parseFloat(v.toFixed(4))),
+                    indices: Array.from(obj.mesh.getIndices()),
+                    normals: Array.from(obj.mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind)).map(v => parseFloat(v.toFixed(4)))
+                }
+                : obj.geometry ? {
+                    positions: Array.from(obj.geometry.positions),
+                    indices: Array.from(obj.geometry.indices),
+                    normals: Array.from(obj.geometry.normals)
+                } : null
+        ) : null,
         // For text objects, save text-specific data
         textContent: obj.textContent || null,
         fontSize: obj.fontSize || null,
