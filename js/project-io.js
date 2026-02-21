@@ -817,8 +817,8 @@ async function exportGLB() {
             exportMesh.rotation = BABYLON.Vector3.Zero();
             exportMesh.scaling = new BABYLON.Vector3(1, 1, 1);
 
-            // Convert from Z-up to Y-up for GLTF: rotate 90 degrees around X
-            exportMesh.rotation.x = Math.PI / 2;
+            // Convert from Z-up to Y-up for GLTF: rotate -90 degrees around X
+            exportMesh.rotation.x = -Math.PI / 2;
             exportMesh.bakeCurrentTransformIntoVertices();
             exportMesh.rotation = BABYLON.Vector3.Zero();
 
