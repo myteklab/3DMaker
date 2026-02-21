@@ -291,6 +291,11 @@ async function _loadSceneFromData(data) {
         material.diffuseColor = color;
         material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
 
+        // Imported STL meshes need double-sided rendering
+        if (objData.type === 'imported') {
+            material.backFaceCulling = false;
+        }
+
         mesh.material = material;
 
         // Apply opacity if saved (default to 1.0 for backward compatibility)
