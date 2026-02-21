@@ -1,7 +1,24 @@
 /**
  * 3DMaker - Project I/O
- * Serialize/deserialize scene data, delete objects, export STL
+ * Serialize/deserialize scene data, delete objects, import/export (STL, GLTF/GLB)
  */
+
+// Dropdown menu toggle
+function toggleDropdown(id) {
+    const menu = document.getElementById(id);
+    const wasOpen = menu.classList.contains('open');
+    // Close all dropdowns first
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('open'));
+    if (!wasOpen) menu.classList.add('open');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.menu-dropdown')) {
+        document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('open'));
+    }
+});
+
 function deleteObject(id, event) {
     if (event) event.stopPropagation();
 
@@ -424,8 +441,10 @@ async function exportSTL() {
     }
 }
 
-// Import STL from file picker
-function importSTL() {
+// Unified import: opens file picker for the chosen format
+function importFile(format) {
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('open'));
+
     if (!sceneReady || !scene) {
         showToast('Please wait, loading 3D engine...', 'error');
         return;
@@ -433,12 +452,23 @@ function importSTL() {
 
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.stl';
-    input.onchange = function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        _processSTLFile(file, file.name.replace(/\.stl$/i, ''));
-    };
+
+    if (format === 'stl') {
+        input.accept = '.stl';
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            _processSTLFile(file, file.name.replace(/\.stl$/i, ''));
+        };
+    } else if (format === 'gltf') {
+        input.accept = '.gltf,.glb';
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            _processGLTFFile(file, file.name.replace(/\.(gltf|glb)$/i, ''));
+        };
+    }
+
     input.click();
 }
 
@@ -604,5 +634,203 @@ function _parseAsciiSTL(text, positions, indices, normals) {
             positions.push(parseFloat(parts[3]));  // Z
             indices.push(vertIndex++);
         }
+    }
+}
+
+// Process a GLTF/GLB file into scene objects
+function _processGLTFFile(file, name) {
+    showToast('Importing GLTF...');
+
+    const url = URL.createObjectURL(file);
+    const extension = file.name.toLowerCase().endsWith('.glb') ? '.glb' : '.gltf';
+
+    BABYLON.SceneLoader.ImportMesh('', '', url, scene, function(meshes) {
+        URL.revokeObjectURL(url);
+
+        if (!meshes || meshes.length === 0) {
+            showToast('No meshes found in file', 'error');
+            return;
+        }
+
+        // Filter to meshes that have geometry (skip empty root nodes)
+        const validMeshes = meshes.filter(m =>
+            m.getTotalVertices() > 0 && m.getIndices() && m.getIndices().length > 0
+        );
+
+        if (validMeshes.length === 0) {
+            showToast('No geometry found in file', 'error');
+            meshes.forEach(m => m.dispose());
+            return;
+        }
+
+        // If multiple meshes, merge them into one
+        let finalMesh;
+        if (validMeshes.length === 1) {
+            finalMesh = validMeshes[0];
+            // Detach from any parent so transforms are world-space
+            finalMesh.parent = null;
+        } else {
+            // Bake world transforms into each mesh before merging
+            validMeshes.forEach(m => {
+                m.parent = null;
+                m.bakeCurrentTransformIntoVertices();
+            });
+            finalMesh = BABYLON.Mesh.MergeMeshes(validMeshes, true, true, undefined, false, true);
+        }
+
+        // Dispose any leftover non-geometry nodes
+        meshes.forEach(m => {
+            if (m !== finalMesh && !m.isDisposed()) m.dispose();
+        });
+
+        if (!finalMesh) {
+            showToast('Failed to process GLTF meshes', 'error');
+            return;
+        }
+
+        finalMesh.name = `object_${objectCounter}`;
+
+        // GLTF uses Y-up, our scene uses Z-up. Rotate -90 degrees around X.
+        // Bake the rotation so vertex data is in our coordinate system.
+        finalMesh.rotation.x = -Math.PI / 2;
+        finalMesh.bakeCurrentTransformIntoVertices();
+        finalMesh.rotation = new BABYLON.Vector3(0, 0, 0);
+
+        // Scale: GLTF is in meters, we need mm * UNIT_SCALE
+        // 1 meter = 1000mm, UNIT_SCALE = 0.1, so multiply by 1000 * 0.1 = 100
+        finalMesh.scaling = new BABYLON.Vector3(100, 100, 100);
+        finalMesh.bakeCurrentTransformIntoVertices();
+        finalMesh.scaling = new BABYLON.Vector3(1, 1, 1);
+
+        // Center on workplane
+        finalMesh.refreshBoundingInfo();
+        const bounds = finalMesh.getBoundingInfo().boundingBox;
+        const centerX = (bounds.minimumWorld.x + bounds.maximumWorld.x) / 2;
+        const centerY = (bounds.minimumWorld.y + bounds.maximumWorld.y) / 2;
+        const minZ = bounds.minimumWorld.z;
+
+        finalMesh.position.x = -centerX;
+        finalMesh.position.y = -centerY;
+        finalMesh.position.z = -minZ;
+
+        finalMesh.bakeCurrentTransformIntoVertices();
+        finalMesh.refreshBoundingInfo();
+        const newBounds = finalMesh.getBoundingInfo().boundingBox;
+        finalMesh.position = new BABYLON.Vector3(0, 0, 0);
+        finalMesh.position.z = newBounds.minimumWorld.z >= 0 ? 0 : -newBounds.minimumWorld.z;
+
+        // Recompute normals
+        const positions = finalMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+        const indices = finalMesh.getIndices();
+        const normals = [];
+        BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+        finalMesh.setVerticesData(BABYLON.VertexBuffer.NormalKind, normals);
+
+        // Material
+        const color = new BABYLON.Color3(
+            0.4 + Math.random() * 0.6,
+            0.4 + Math.random() * 0.6,
+            0.4 + Math.random() * 0.6
+        );
+        const material = new BABYLON.StandardMaterial(`mat_${objectCounter}`, scene);
+        material.diffuseColor = color;
+        material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        material.backFaceCulling = false;
+        finalMesh.material = material;
+
+        const displayName = name || ('Import ' + (objectCounter + 1));
+
+        const obj = {
+            id: objectCounter,
+            type: 'imported',
+            name: displayName,
+            mesh: finalMesh,
+            color: color,
+            dimensions: null,
+            opacity: 1.0,
+            showEdges: false,
+            wireframeClone: null
+        };
+
+        objects.push(obj);
+        objectCounter++;
+
+        updateObjectsList();
+        selectObject(obj);
+        saveState('Import ' + displayName);
+        showToast('Imported ' + displayName);
+    }, null, function(scene, message, exception) {
+        URL.revokeObjectURL(url);
+        console.error('GLTF import error:', message, exception);
+        showToast('Import failed: ' + message, 'error');
+    }, extension);
+}
+
+// Export all objects as GLB
+async function exportGLB() {
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('open'));
+
+    if (objects.length === 0) {
+        showToast('Add some objects first!', 'error');
+        return;
+    }
+
+    try {
+        showToast('Generating GLB...');
+
+        // Create a temporary scene for export with Y-up (GLTF standard)
+        const exportScene = new BABYLON.Scene(engine);
+
+        objects.forEach(obj => {
+            // Clone the mesh into the export scene
+            const clone = obj.mesh.clone('export_' + obj.id, null);
+
+            // Transfer to export scene
+            exportScene.addMesh(clone);
+
+            // Copy material
+            const mat = new BABYLON.StandardMaterial('exportMat_' + obj.id, exportScene);
+            mat.diffuseColor = obj.color.clone();
+            mat.backFaceCulling = false;
+            clone.material = mat;
+
+            // Bake current transforms
+            clone.bakeCurrentTransformIntoVertices();
+
+            // Convert from Z-up to Y-up for GLTF: rotate 90 degrees around X
+            clone.rotation.x = Math.PI / 2;
+            clone.bakeCurrentTransformIntoVertices();
+            clone.rotation = new BABYLON.Vector3(0, 0, 0);
+
+            // Scale from Babylon units back to meters (GLTF standard)
+            // Our units: 1 unit = 10mm = 0.01m
+            clone.scaling = new BABYLON.Vector3(0.01, 0.01, 0.01);
+            clone.bakeCurrentTransformIntoVertices();
+            clone.scaling = new BABYLON.Vector3(1, 1, 1);
+        });
+
+        const glb = await BABYLON.GLTF2Export.GLBAsync(exportScene, 'model');
+        exportScene.dispose();
+
+        // Upload to user's files via platform
+        const blob = glb.glTFFiles['model.glb'];
+        const reader = new FileReader();
+        reader.onload = async function() {
+            try {
+                const result = await Platform.uploadAsset(reader.result, 'model.glb', 'model/gltf-binary');
+                if (result && result.success) {
+                    showToast('GLB saved to your files!');
+                } else {
+                    showToast('Export failed', 'error');
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                showToast('Export failed: ' + err.message, 'error');
+            }
+        };
+        reader.readAsDataURL(blob);
+    } catch (error) {
+        console.error('GLB export error:', error);
+        showToast('Export failed: ' + error.message, 'error');
     }
 }
