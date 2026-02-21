@@ -348,7 +348,7 @@ async function _loadSceneFromData(data) {
     deselectAll();
 }
 
-// Export STL (download to user's device)
+// Export STL to user's files
 async function exportSTL() {
     if (objects.length === 0) {
         showToast('Add some objects first!', 'error');
@@ -396,16 +396,23 @@ async function exportSTL() {
 
         stlString += 'endsolid model\n';
 
-        // Download to user's device
+        // Upload to user's files via platform
         const blob = new Blob([stlString], { type: 'application/sla' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'model.stl';
-        a.click();
-        URL.revokeObjectURL(url);
-
-        showToast('STL exported!');
+        const reader = new FileReader();
+        reader.onload = async function() {
+            try {
+                const result = await Platform.uploadAsset(reader.result, 'model.stl', 'application/sla');
+                if (result && result.success) {
+                    showToast('STL saved to your files!');
+                } else {
+                    showToast('Export failed', 'error');
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                showToast('Export failed: ' + err.message, 'error');
+            }
+        };
+        reader.readAsDataURL(blob);
     } catch (error) {
         console.error('Export error:', error);
         showToast('Export failed: ' + error.message, 'error');
