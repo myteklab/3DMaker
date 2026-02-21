@@ -781,32 +781,60 @@ async function exportGLB() {
         // Create a temporary scene for export with Y-up (GLTF standard)
         const exportScene = new BABYLON.Scene(engine);
 
+        // Add a light so the GLTF has reasonable default rendering
+        new BABYLON.HemisphericLight('exportLight', new BABYLON.Vector3(0, 1, 0), exportScene);
+
         objects.forEach(obj => {
-            // Clone the mesh into the export scene
-            const clone = obj.mesh.clone('export_' + obj.id, null);
+            // Get raw vertex data from the source mesh
+            const srcPositions = obj.mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+            const srcIndices = obj.mesh.getIndices();
+            const srcNormals = obj.mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind);
 
-            // Transfer to export scene
-            exportScene.addMesh(clone);
+            if (!srcPositions || !srcIndices) return;
 
-            // Copy material
-            const mat = new BABYLON.StandardMaterial('exportMat_' + obj.id, exportScene);
-            mat.diffuseColor = obj.color.clone();
-            mat.backFaceCulling = false;
-            clone.material = mat;
+            // Create a new mesh directly in the export scene
+            const exportMesh = new BABYLON.Mesh('export_' + obj.id, exportScene);
+            const vertexData = new BABYLON.VertexData();
+            vertexData.positions = new Float32Array(srcPositions);
+            vertexData.indices = new Uint32Array(srcIndices);
+            if (srcNormals) {
+                vertexData.normals = new Float32Array(srcNormals);
+            } else {
+                const computedNormals = [];
+                BABYLON.VertexData.ComputeNormals(vertexData.positions, vertexData.indices, computedNormals);
+                vertexData.normals = new Float32Array(computedNormals);
+            }
+            vertexData.applyToMesh(exportMesh);
 
-            // Bake current transforms
-            clone.bakeCurrentTransformIntoVertices();
+            // Copy source transforms
+            exportMesh.position = obj.mesh.position.clone();
+            exportMesh.rotation = obj.mesh.rotation.clone();
+            exportMesh.scaling = obj.mesh.scaling.clone();
+
+            // Bake all transforms into vertices
+            exportMesh.bakeCurrentTransformIntoVertices();
+            exportMesh.position = BABYLON.Vector3.Zero();
+            exportMesh.rotation = BABYLON.Vector3.Zero();
+            exportMesh.scaling = new BABYLON.Vector3(1, 1, 1);
 
             // Convert from Z-up to Y-up for GLTF: rotate 90 degrees around X
-            clone.rotation.x = Math.PI / 2;
-            clone.bakeCurrentTransformIntoVertices();
-            clone.rotation = new BABYLON.Vector3(0, 0, 0);
+            exportMesh.rotation.x = Math.PI / 2;
+            exportMesh.bakeCurrentTransformIntoVertices();
+            exportMesh.rotation = BABYLON.Vector3.Zero();
 
-            // Scale from Babylon units back to meters (GLTF standard)
-            // Our units: 1 unit = 10mm = 0.01m
-            clone.scaling = new BABYLON.Vector3(0.01, 0.01, 0.01);
-            clone.bakeCurrentTransformIntoVertices();
-            clone.scaling = new BABYLON.Vector3(1, 1, 1);
+            // Scale from Babylon units to meters (GLTF standard)
+            // 1 Babylon unit = 10mm = 0.01m
+            exportMesh.scaling = new BABYLON.Vector3(0.01, 0.01, 0.01);
+            exportMesh.bakeCurrentTransformIntoVertices();
+            exportMesh.scaling = new BABYLON.Vector3(1, 1, 1);
+
+            // Use PBR material for proper GLTF export
+            const mat = new BABYLON.PBRMaterial('exportMat_' + obj.id, exportScene);
+            mat.albedoColor = obj.color.clone();
+            mat.metallic = 0.1;
+            mat.roughness = 0.8;
+            mat.backFaceCulling = false;
+            exportMesh.material = mat;
         });
 
         const glb = await BABYLON.GLTF2Export.GLBAsync(exportScene, 'model');
