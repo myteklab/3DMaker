@@ -19,6 +19,43 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Auto-scale and center an imported mesh to fit the build platform.
+// Scales down if larger than the platform, centers on XY, sits on Z=0.
+// Build platform is 200x200mm = 20x20 Babylon units.
+function _fitMeshToPlatform(mesh) {
+    const MAX_DIM = 18; // 180mm in Babylon units, leave some margin on the 200mm platform
+
+    mesh.refreshBoundingInfo();
+    const bounds = mesh.getBoundingInfo().boundingBox;
+    const size = bounds.maximumWorld.subtract(bounds.minimumWorld);
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    // Scale down if too large
+    if (maxDim > MAX_DIM && maxDim > 0) {
+        const scale = MAX_DIM / maxDim;
+        mesh.scaling = new BABYLON.Vector3(scale, scale, scale);
+        mesh.bakeCurrentTransformIntoVertices();
+        mesh.scaling = new BABYLON.Vector3(1, 1, 1);
+    }
+
+    // Center on XY and sit on Z=0
+    mesh.refreshBoundingInfo();
+    const b = mesh.getBoundingInfo().boundingBox;
+    const cx = (b.minimumWorld.x + b.maximumWorld.x) / 2;
+    const cy = (b.minimumWorld.y + b.maximumWorld.y) / 2;
+    const mz = b.minimumWorld.z;
+
+    mesh.position.x = -cx;
+    mesh.position.y = -cy;
+    mesh.position.z = -mz;
+
+    mesh.bakeCurrentTransformIntoVertices();
+    mesh.refreshBoundingInfo();
+    mesh.position = BABYLON.Vector3.Zero();
+    const fb = mesh.getBoundingInfo().boundingBox;
+    mesh.position.z = fb.minimumWorld.z >= 0 ? 0 : -fb.minimumWorld.z;
+}
+
 function deleteObject(id, event) {
     if (event) event.stopPropagation();
 
@@ -526,22 +563,8 @@ function _processSTLFile(file, name) {
 
             vertexData.applyToMesh(mesh);
 
-            // Center the mesh on the workplane
-            mesh.refreshBoundingInfo();
-            const bounds = mesh.getBoundingInfo().boundingBox;
-            const centerX = (bounds.minimumWorld.x + bounds.maximumWorld.x) / 2;
-            const centerY = (bounds.minimumWorld.y + bounds.maximumWorld.y) / 2;
-            const minZ = bounds.minimumWorld.z;
-
-            mesh.position.x = -centerX;
-            mesh.position.y = -centerY;
-            mesh.position.z = -minZ; // Sit on workplane (Z=0)
-
-            // Bake the centering into the vertices so position reads as (0,0,offset)
-            mesh.bakeCurrentTransformIntoVertices();
-            mesh.refreshBoundingInfo();
-            const newBounds = mesh.getBoundingInfo().boundingBox;
-            mesh.position.z = newBounds.minimumWorld.z >= 0 ? 0 : -newBounds.minimumWorld.z;
+            // Auto-scale to fit build platform and center
+            _fitMeshToPlatform(mesh);
 
             // Material
             const color = new BABYLON.Color3(
@@ -702,22 +725,8 @@ function _processGLTFFile(file, name) {
         finalMesh.bakeCurrentTransformIntoVertices();
         finalMesh.scaling = new BABYLON.Vector3(1, 1, 1);
 
-        // Center on workplane
-        finalMesh.refreshBoundingInfo();
-        const bounds = finalMesh.getBoundingInfo().boundingBox;
-        const centerX = (bounds.minimumWorld.x + bounds.maximumWorld.x) / 2;
-        const centerY = (bounds.minimumWorld.y + bounds.maximumWorld.y) / 2;
-        const minZ = bounds.minimumWorld.z;
-
-        finalMesh.position.x = -centerX;
-        finalMesh.position.y = -centerY;
-        finalMesh.position.z = -minZ;
-
-        finalMesh.bakeCurrentTransformIntoVertices();
-        finalMesh.refreshBoundingInfo();
-        const newBounds = finalMesh.getBoundingInfo().boundingBox;
-        finalMesh.position = new BABYLON.Vector3(0, 0, 0);
-        finalMesh.position.z = newBounds.minimumWorld.z >= 0 ? 0 : -newBounds.minimumWorld.z;
+        // Auto-scale to fit build platform and center
+        _fitMeshToPlatform(finalMesh);
 
         // Recompute normals
         const positions = finalMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
