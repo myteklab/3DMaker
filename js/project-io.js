@@ -67,14 +67,14 @@ function getSceneData() {
             textContent: obj.textContent || null,
             fontSize: obj.fontSize || null,
             fontFile: obj.fontFile || null,
-            // For CSG and text objects, store geometry and scaling
+            // For CSG, text, and imported objects, store geometry and scaling
             // Use toFixed(4) for positions/normals to reduce file size (0.0001 units = 0.001mm precision)
-            geometry: (obj.type === 'csg' || obj.type === 'text') ? {
+            geometry: (obj.type === 'csg' || obj.type === 'text' || obj.type === 'imported') ? {
                 positions: Array.from(obj.mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind)).map(v => parseFloat(v.toFixed(4))),
                 indices: Array.from(obj.mesh.getIndices()),
                 normals: Array.from(obj.mesh.getVerticesData(BABYLON.VertexBuffer.NormalKind)).map(v => parseFloat(v.toFixed(4)))
             } : null,
-            scaling: (obj.type === 'csg' || obj.type === 'text') ? {
+            scaling: (obj.type === 'csg' || obj.type === 'text' || obj.type === 'imported') ? {
                 x: obj.mesh.scaling.x,
                 y: obj.mesh.scaling.y,
                 z: obj.mesh.scaling.z
@@ -416,5 +416,187 @@ async function exportSTL() {
     } catch (error) {
         console.error('Export error:', error);
         showToast('Export failed: ' + error.message, 'error');
+    }
+}
+
+// Import STL from file picker
+function importSTL() {
+    if (!sceneReady || !scene) {
+        showToast('Please wait, loading 3D engine...', 'error');
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.stl';
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        _processSTLFile(file, file.name.replace(/\.stl$/i, ''));
+    };
+    input.click();
+}
+
+// Process an STL file (File or Blob) into a scene object
+function _processSTLFile(file, name) {
+    showToast('Importing STL...');
+
+    const reader = new FileReader();
+    reader.onload = function() {
+        try {
+            const data = reader.result;
+            const positions = [];
+            const indices = [];
+            const normals = [];
+
+            // Detect binary vs ASCII STL
+            const header = new Uint8Array(data, 0, 80);
+            const isBinary = _isBinarySTL(data);
+
+            if (isBinary) {
+                _parseBinarySTL(data, positions, indices, normals);
+            } else {
+                const text = new TextDecoder().decode(data);
+                _parseAsciiSTL(text, positions, indices, normals);
+            }
+
+            if (positions.length === 0) {
+                showToast('STL file is empty or invalid', 'error');
+                return;
+            }
+
+            // Scale from mm to Babylon units and swap Y/Z for Z-up
+            // STL files are typically in mm. Our scene uses UNIT_SCALE (0.1 = 10mm per unit).
+            for (let i = 0; i < positions.length; i += 3) {
+                const x = positions[i] * UNIT_SCALE;
+                const y = positions[i + 1] * UNIT_SCALE;
+                const z = positions[i + 2] * UNIT_SCALE;
+                positions[i] = x;
+                positions[i + 1] = y;
+                positions[i + 2] = z;
+            }
+            // Scale normals Y/Z swap not needed since they're direction vectors
+            // but we do need to swap if the coordinate system differs
+            // STL is typically Z-up which matches our scene, so no swap needed
+
+            // Create mesh from parsed data
+            const mesh = new BABYLON.Mesh(`object_${objectCounter}`, scene);
+            const vertexData = new BABYLON.VertexData();
+            vertexData.positions = new Float32Array(positions);
+            vertexData.indices = new Uint32Array(indices);
+
+            // Recompute normals for consistent lighting
+            BABYLON.VertexData.ComputeNormals(vertexData.positions, vertexData.indices, normals);
+            vertexData.normals = new Float32Array(normals);
+
+            vertexData.applyToMesh(mesh);
+
+            // Center the mesh on the workplane
+            mesh.refreshBoundingInfo();
+            const bounds = mesh.getBoundingInfo().boundingBox;
+            const centerX = (bounds.minimumWorld.x + bounds.maximumWorld.x) / 2;
+            const centerY = (bounds.minimumWorld.y + bounds.maximumWorld.y) / 2;
+            const minZ = bounds.minimumWorld.z;
+
+            mesh.position.x = -centerX;
+            mesh.position.y = -centerY;
+            mesh.position.z = -minZ; // Sit on workplane (Z=0)
+
+            // Bake the centering into the vertices so position reads as (0,0,offset)
+            mesh.bakeCurrentTransformIntoVertices();
+            mesh.refreshBoundingInfo();
+            const newBounds = mesh.getBoundingInfo().boundingBox;
+            mesh.position.z = newBounds.minimumWorld.z >= 0 ? 0 : -newBounds.minimumWorld.z;
+
+            // Material
+            const color = new BABYLON.Color3(
+                0.4 + Math.random() * 0.6,
+                0.4 + Math.random() * 0.6,
+                0.4 + Math.random() * 0.6
+            );
+            const material = new BABYLON.StandardMaterial(`mat_${objectCounter}`, scene);
+            material.diffuseColor = color;
+            material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+            mesh.material = material;
+
+            const displayName = name || ('Import ' + (objectCounter + 1));
+
+            const obj = {
+                id: objectCounter,
+                type: 'imported',
+                name: displayName,
+                mesh: mesh,
+                color: color,
+                dimensions: null,
+                opacity: 1.0,
+                showEdges: false,
+                wireframeClone: null
+            };
+
+            objects.push(obj);
+            objectCounter++;
+
+            updateObjectsList();
+            selectObject(obj);
+            saveState('Import ' + displayName);
+            showToast('Imported ' + displayName);
+        } catch (err) {
+            console.error('STL import error:', err);
+            showToast('Import failed: ' + err.message, 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function _isBinarySTL(buffer) {
+    // Binary STL: 80-byte header + 4-byte triangle count + 50 bytes per triangle
+    if (buffer.byteLength < 84) return false;
+    const view = new DataView(buffer);
+    const triCount = view.getUint32(80, true);
+    const expectedSize = 84 + (triCount * 50);
+    // If size matches binary format, it's binary (unless it starts with "solid")
+    if (Math.abs(buffer.byteLength - expectedSize) < 10) return true;
+    // Check if it starts with "solid" (ASCII indicator)
+    const header = new TextDecoder().decode(new Uint8Array(buffer, 0, 5));
+    return header !== 'solid';
+}
+
+function _parseBinarySTL(buffer, positions, indices, normals) {
+    const view = new DataView(buffer);
+    const triCount = view.getUint32(80, true);
+    let offset = 84;
+    let vertIndex = 0;
+
+    for (let i = 0; i < triCount; i++) {
+        // Normal (skip, we'll recompute)
+        offset += 12;
+
+        // 3 vertices
+        for (let v = 0; v < 3; v++) {
+            positions.push(view.getFloat32(offset, true));      // X
+            positions.push(view.getFloat32(offset + 4, true));  // Y
+            positions.push(view.getFloat32(offset + 8, true));  // Z
+            indices.push(vertIndex++);
+            offset += 12;
+        }
+
+        // Attribute byte count
+        offset += 2;
+    }
+}
+
+function _parseAsciiSTL(text, positions, indices, normals) {
+    const lines = text.split('\n');
+    let vertIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('vertex')) {
+            const parts = line.split(/\s+/);
+            positions.push(parseFloat(parts[1]));  // X
+            positions.push(parseFloat(parts[2]));  // Y
+            positions.push(parseFloat(parts[3]));  // Z
+            indices.push(vertIndex++);
+        }
     }
 }
