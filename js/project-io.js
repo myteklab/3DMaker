@@ -517,6 +517,7 @@ function _processSTLFile(file, name) {
             const material = new BABYLON.StandardMaterial(`mat_${objectCounter}`, scene);
             material.diffuseColor = color;
             material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+            material.backFaceCulling = false;
             mesh.material = material;
 
             const displayName = name || ('Import ' + (objectCounter + 1));
