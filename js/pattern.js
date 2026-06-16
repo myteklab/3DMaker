@@ -22,9 +22,9 @@ let currentPatternType = 'row';
 let patternSettings = {
     row: { count: 5, spacingX: 20, spacingY: 0, spacingZ: 0 },
     grid: { rows: 3, columns: 3, spacingX: 20, spacingY: 20, plane: 'xy' },
-    circle: { count: 8, radius: 50, orientation: 'xy' },
-    helix: { count: 12, rotations: 3, radius: 40, height: 100, orientation: 'xy' },
-    spiral: { count: 12, rotations: 3, startRadius: 0, endRadius: 80, height: 0, orientation: 'xy' }
+    circle: { count: 8, radius: 50, orientation: 'xy', alignToCurve: false },
+    helix: { count: 12, rotations: 3, radius: 40, height: 100, orientation: 'xy', alignToCurve: false },
+    spiral: { count: 12, rotations: 3, startRadius: 0, endRadius: 80, height: 0, orientation: 'xy', alignToCurve: false }
 };
 
 // Global setting for all patterns
@@ -65,23 +65,24 @@ function setPatternType(type) {
 function updatePatternSetting(setting, value) {
     // Non-numeric settings
     const nonNumericSettings = ['direction', 'plane', 'orientation'];
+    const booleanSettings = ['alignToCurve'];
 
-    if (currentPatternType === 'row') {
-        patternSettings.row[setting] = nonNumericSettings.includes(setting) ? value : parseInt(value);
-    } else if (currentPatternType === 'grid') {
-        patternSettings.grid[setting] = nonNumericSettings.includes(setting) ? value : parseInt(value);
-    } else if (currentPatternType === 'circle') {
-        patternSettings.circle[setting] = nonNumericSettings.includes(setting) ? value : parseInt(value);
-    } else if (currentPatternType === 'helix') {
-        patternSettings.helix[setting] = nonNumericSettings.includes(setting) ? value : parseInt(value);
-    } else if (currentPatternType === 'spiral') {
-        patternSettings.spiral[setting] = nonNumericSettings.includes(setting) ? value : parseInt(value);
+    let parsed;
+    if (booleanSettings.includes(setting)) {
+        parsed = (value === true || value === 'true');
+    } else if (nonNumericSettings.includes(setting)) {
+        parsed = value;
+    } else {
+        parsed = parseInt(value);
+    }
+    if (patternSettings[currentPatternType]) {
+        patternSettings[currentPatternType][setting] = parsed;
     }
 
     // Update display label (only for numeric settings)
     const labelId = `${currentPatternType}-${setting}-value`;
     const label = document.getElementById(labelId);
-    if (label && !nonNumericSettings.includes(setting)) {
+    if (label && !nonNumericSettings.includes(setting) && !booleanSettings.includes(setting)) {
         let suffix = '';
         if (setting.includes('spacing') || setting.includes('Spacing') || setting.includes('radius') || setting === 'height' || setting.includes('Radius')) {
             suffix = 'mm';
@@ -233,6 +234,27 @@ function createPatternClick() {
     executePattern();
 }
 
+// Revolve a clone's orientation about the pattern plane's normal by `angle`, so a
+// shape pointed outward (or any direction) at the start keeps that direction
+// relative to the curve all the way around -- e.g. cones whose points stay facing
+// outward as they go around a circle. The normal is the cross product of the two
+// in-plane axes, which keeps the spin sense matching the cos/sin position.
+function applyCurveAlignment(mesh, orientation, angle) {
+    let normal;
+    if (orientation === 'xz') normal = new BABYLON.Vector3(0, -1, 0); // X cross Z = -Y
+    else if (orientation === 'yz') normal = BABYLON.Axis.X;           // Y cross Z = +X
+    else normal = BABYLON.Axis.Z;                                     // xy: X cross Y = +Z
+
+    const sourceQ = mesh.rotationQuaternion
+        ? mesh.rotationQuaternion.clone()
+        : BABYLON.Quaternion.FromEulerVector(mesh.rotation);
+    const revolveQ = BABYLON.Quaternion.RotationAxis(normal, angle);
+    const finalQ = revolveQ.multiply(sourceQ); // apply source orientation, then revolve
+    // Store back as Euler so it serializes through getSceneData (which reads mesh.rotation).
+    mesh.rotationQuaternion = null;
+    mesh.rotation = finalQ.toEulerAngles();
+}
+
 function executePattern() {
     const sourceObj = selectedObject;
     const settings = patternSettings[currentPatternType];
@@ -304,6 +326,10 @@ function executePattern() {
                 newObj.mesh.position.y += Math.cos(angle) * radius;
                 newObj.mesh.position.z += Math.sin(angle) * radius;
             }
+
+            if (settings.alignToCurve) {
+                applyCurveAlignment(newObj.mesh, settings.orientation, angle);
+            }
         } else if (currentPatternType === 'helix') {
             // Helix/3D Spiral pattern (like a spring or spiral staircase)
             const rotations = settings.rotations;
@@ -332,6 +358,10 @@ function executePattern() {
                 newObj.mesh.position.y += Math.cos(angle) * radius;
                 newObj.mesh.position.z += Math.sin(angle) * radius;
                 newObj.mesh.position.x += verticalPos;
+            }
+
+            if (settings.alignToCurve) {
+                applyCurveAlignment(newObj.mesh, settings.orientation, angle);
             }
         } else if (currentPatternType === 'spiral') {
             // Archimedean/Flat Spiral pattern (like a nautilus shell or galaxy)
@@ -373,6 +403,10 @@ function executePattern() {
                 newObj.mesh.position.y += Math.cos(angle) * radius;
                 newObj.mesh.position.z += Math.sin(angle) * radius;
                 newObj.mesh.position.x += verticalPos; // Shell extends sideways
+            }
+
+            if (settings.alignToCurve) {
+                applyCurveAlignment(newObj.mesh, settings.orientation, angle);
             }
         }
 
