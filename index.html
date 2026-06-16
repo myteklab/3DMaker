@@ -50,7 +50,7 @@
         <button class="menu-btn" id="toggle-overlays-btn" onclick="toggleOverlays()" title="Show/Hide Info Overlays">
             Info
         </button>
-        <button class="menu-btn" id="section-btn" onclick="toggleSection()" title="Slice the model with a movable plane to see inside (cross-section)">
+        <button class="menu-btn" id="section-btn" onclick="toggleSectionView()" title="Slice the model with a movable plane to see inside (cross-section)">
             Section
         </button>
         <button class="menu-btn" id="xray-btn" onclick="toggleXray()" title="Make all shapes see-through to peek at internal features">
@@ -112,7 +112,7 @@
                     <button class="menu-btn active" id="section-axis-z" onclick="setSectionAxis('z')" style="padding:4px 10px; font-size:11px;">Z</button>
                     <button class="menu-btn" onclick="flipSection()" title="Flip which side is cut away" style="padding:4px 10px; font-size:11px;">Flip</button>
                 </div>
-                <input type="range" id="section-slider" min="0" max="100" value="50" oninput="onSectionSlider(this.value)" style="width:180px; display:block;">
+                <input type="range" id="section-slider" min="0" max="100" value="50" oninput="onSectionSlider(this.value)" style="width:200px; display:block; height:22px; cursor:pointer; accent-color:#4a9eff;">
                 <div style="opacity:0.6; margin-top:4px;">Slide to move the cut plane</div>
             </div>
         </div>

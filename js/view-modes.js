@@ -22,7 +22,9 @@ let _isolateBackup = []; // restore visibility per mesh
 
 // ---- Cross-section -----------------------------------------------------
 
-function toggleSection() {
+// Note: named toggleSectionView (not toggleSection) to avoid colliding with
+// properties.js's toggleSection(), which collapses property-panel sections.
+function toggleSectionView() {
     sectionActive = !sectionActive;
     const panel = document.getElementById('section-panel');
     const btn = document.getElementById('section-btn');
