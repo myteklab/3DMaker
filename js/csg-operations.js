@@ -219,6 +219,19 @@ function _createTempMeshForCSG(data) {
     return mesh;
 }
 
+// Compose the world matrix an operand had when this CSG was created, from its
+// stored position/rotation/scaling. Used to recover the result mesh's original
+// (creation-time) transform, which Babylon's toMesh() copies from the first operand.
+function _creationWorldMatrix(op) {
+    if (!op || !op.position || !op.rotation) return null;
+    const scl = op.scaling
+        ? new BABYLON.Vector3(op.scaling.x, op.scaling.y, op.scaling.z)
+        : BABYLON.Vector3.One();
+    const rot = BABYLON.Quaternion.FromEulerAngles(op.rotation.x, op.rotation.y, op.rotation.z);
+    const pos = new BABYLON.Vector3(op.position.x, op.position.y, op.position.z);
+    return BABYLON.Matrix.Compose(scl, rot, pos);
+}
+
 // Build a BABYLON.CSG from an object. For CSG results with stored operands,
 // reconstructs the CSG tree from the original primitives to avoid BSP tree
 // corruption that occurs when composite meshes are round-tripped through FromMesh.
@@ -228,10 +241,23 @@ function buildCSGForObject(obj) {
     }
 
     console.log('Rebuilding CSG from operand tree for:', obj.name);
-    const meshWorldMatrix = obj.mesh.computeWorldMatrix(true);
+    const currentWorld = obj.mesh.computeWorldMatrix(true);
+
+    // Operands are stored in the world space they occupied when this CSG was
+    // created. At creation, toMesh() gave the result mesh the transform of its
+    // first operand (T0), so the operand world geometry already bakes T0 in.
+    // Re-applying the mesh's full current world matrix (T1) would double-count
+    // T0 -- that is what rotated "on its side" shapes back upright on a later
+    // subtract. Apply only the delta the user moved the mesh by since creation:
+    // points go through T0^-1 then T1, i.e. parentMatrix = T0^-1 * T1.
+    const t0 = _creationWorldMatrix(obj.operands[0]);
+    const parentMatrix = t0
+        ? t0.clone().invert().multiply(currentWorld)
+        : currentWorld;
+
     const tempMeshes = [];
     try {
-        return _rebuildCSGTree(obj.operands, obj.operation, meshWorldMatrix, tempMeshes);
+        return _rebuildCSGTree(obj.operands, obj.operation, parentMatrix, tempMeshes);
     } finally {
         tempMeshes.forEach(m => m.dispose());
     }
