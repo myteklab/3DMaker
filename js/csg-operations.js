@@ -45,7 +45,11 @@ function cloneObjectData(obj) {
         fontSize: obj.fontSize || null,
         // For nested CSG, preserve child operands
         operation: obj.operation || null,
-        operands: obj.operands ? obj.operands.map(op => cloneObjectData(op)) : null
+        operands: obj.operands ? obj.operands.map(op => cloneObjectData(op)) : null,
+        // The mesh transform Babylon assigned this CSG at creation (T0). Recorded
+        // so rebuilds use the exact transform instead of re-deriving it from the
+        // operand tree, which is the robust source of truth for nested CSGs.
+        creationMatrix: obj.creationMatrix ? Array.from(obj.creationMatrix) : null
     };
 }
 
@@ -235,14 +239,26 @@ function _isCSGOperand(op) {
 }
 
 // The transform Babylon's toMesh() gave a CSG result mesh at creation (T0).
-// toMesh() copies the transform of the FIRST operand's CSG. When that first
-// operand is a primitive, T0 is simply the primitive's stored transform. When
-// it is itself a CSG, the rebuild bakes that child's geometry into world space
-// and assigns the result only the child's delta (T0^-1 * T1) -- so T0 of the
-// parent is that child's delta, computed recursively. Getting this right for
-// nested CSGs is what keeps operands (e.g. a unioned sphere) from being moved
-// on a later boolean op.
+// Prefer the value recorded at creation (creationMatrix) -- it is the exact
+// source of truth and survives non-uniform/mirrored scaling that re-deriving
+// through Compose/decompose could lose. Fall back to deriving it for projects
+// saved before creationMatrix was recorded.
 function _csgCreationTransform(node) {
+    if (node.creationMatrix && node.creationMatrix.length === 16) {
+        return BABYLON.Matrix.FromArray(node.creationMatrix);
+    }
+    return _csgDerivedCreationTransform(node);
+}
+
+// Derive T0 from the operand tree (fallback for legacy data without
+// creationMatrix). toMesh() copies the transform of the FIRST operand's CSG.
+// When that first operand is a primitive, T0 is simply the primitive's stored
+// transform. When it is itself a CSG, the rebuild bakes that child's geometry
+// into world space and assigns the result only the child's delta (T0^-1 * T1),
+// so T0 of the parent is that child's delta, computed recursively. Getting this
+// right is what keeps operands (e.g. a unioned sphere) from being moved on a
+// later boolean op.
+function _csgDerivedCreationTransform(node) {
     const op0 = node.operands[0];
     return _isCSGOperand(op0) ? _csgLocalDelta(op0) : _composeStoredTransform(op0);
 }
@@ -378,6 +394,12 @@ function performCSG(operation) {
         // Create new mesh from result
         const resultMesh = result.toMesh(`object_${objectCounter}`, selectedObjects[0].mesh.material, scene);
 
+        // Record the transform Babylon just assigned (T0). This is the robust
+        // source of truth for future rebuilds when this result is reused as an
+        // operand -- captured now, before the user moves the mesh.
+        resultMesh.computeWorldMatrix(true);
+        const creationMatrix = Array.from(resultMesh.getWorldMatrix().m);
+
         // Log result
         const resultBounds = resultMesh.getBoundingInfo().boundingBox;
         const rMin = resultBounds.minimumWorld;
@@ -401,6 +423,7 @@ function performCSG(operation) {
             wireframeClone: null, // Wireframe overlay (created when showEdges is enabled)
             operation: operation, // Store operation type (union, subtract, intersect)
             operands: selectedObjects.map(obj => cloneObjectData(obj)), // Store original shapes
+            creationMatrix: creationMatrix, // T0 recorded for robust rebuilds
             expanded: false      // For UI: whether child list is expanded
         };
 
@@ -618,6 +641,7 @@ function reverseCSG(csgId, event) {
                 wireframeClone: wireframeClone,
                 operation: objData.operation || null,
                 operands: objData.operands || null,
+                creationMatrix: objData.creationMatrix || null,
                 textContent: objData.textContent || null,
                 fontSize: objData.fontSize || null,
                 expanded: false

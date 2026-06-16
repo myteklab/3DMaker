@@ -135,7 +135,9 @@ function getSceneData() {
             } : null,
             // For CSG objects, store operation type and original shapes
             operation: obj.operation || null,
-            operands: obj.operands || null
+            operands: obj.operands || null,
+            // T0 recorded at creation, for robust CSG rebuilds (see csg-operations.js)
+            creationMatrix: obj.creationMatrix ? Array.from(obj.creationMatrix) : null
         }))
     };
 }
@@ -403,6 +405,7 @@ async function _loadSceneFromData(data) {
             wireframeClone: wireframeClone,
             operation: objData.operation || null,
             operands: objData.operands || null,
+            creationMatrix: objData.creationMatrix || null,
             textContent: objData.textContent || null,
             fontSize: objData.fontSize || null,
             expanded: false
