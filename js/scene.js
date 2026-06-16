@@ -8,6 +8,15 @@ function initScene() {
     scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0.10, 0.10, 0.10, 1);
 
+    // Transparent objects live in renderingGroupId 1 (opaque in 0, size handles in 2).
+    // Babylon clears the depth buffer before each rendering group by default, which
+    // would make transparent shapes lose the depth of the opaque objects drawn in
+    // group 0 -- so a transparent shape paints over an opaque object even when the
+    // opaque one is actually in front (it looked like the inner object sat "behind").
+    // Keep depth shared between groups 0 and 1 so transparency depth-tests correctly.
+    // Group 2 is left to clear depth so size handles still draw on top.
+    scene.setRenderingAutoClearDepthStencil(1, false);
+
     // Use right-handed coordinate system with Z-up for proper 3D printing orientation
     // This gives us: X+ right, Y+ back, Z+ up
     scene.useRightHandedSystem = true;
