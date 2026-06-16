@@ -50,6 +50,15 @@
         <button class="menu-btn" id="toggle-overlays-btn" onclick="toggleOverlays()" title="Show/Hide Info Overlays">
             Info
         </button>
+        <button class="menu-btn" id="section-btn" onclick="toggleSection()" title="Slice the model with a movable plane to see inside (cross-section)">
+            Section
+        </button>
+        <button class="menu-btn" id="xray-btn" onclick="toggleXray()" title="Make all shapes see-through to peek at internal features">
+            X-Ray
+        </button>
+        <button class="menu-btn" id="isolate-btn" onclick="toggleIsolate()" title="Hide everything except the selected shape">
+            Isolate
+        </button>
         <div style="margin-left: auto; display: flex; gap: 10px;">
             <button class="menu-btn active" id="move-mode-btn" onclick="setTransformMode('position')" title="Move position (W)">
                 Move
@@ -93,6 +102,19 @@
 
             <!-- 3D Orientation Gizmo -->
             <canvas id="orientation-gizmo"></canvas>
+
+            <!-- Cross-section controls (shown only when Section is active) -->
+            <div id="section-panel" style="display:none; position:absolute; top:12px; left:12px; z-index:20; background:rgba(30,30,32,0.92); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:10px 12px; font-size:12px; color:#ddd; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+                <div style="font-weight:600; margin-bottom:8px;">Cross-section</div>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <button class="menu-btn" id="section-axis-x" onclick="setSectionAxis('x')" style="padding:4px 10px; font-size:11px;">X</button>
+                    <button class="menu-btn" id="section-axis-y" onclick="setSectionAxis('y')" style="padding:4px 10px; font-size:11px;">Y</button>
+                    <button class="menu-btn active" id="section-axis-z" onclick="setSectionAxis('z')" style="padding:4px 10px; font-size:11px;">Z</button>
+                    <button class="menu-btn" onclick="flipSection()" title="Flip which side is cut away" style="padding:4px 10px; font-size:11px;">Flip</button>
+                </div>
+                <input type="range" id="section-slider" min="0" max="100" value="50" oninput="onSectionSlider(this.value)" style="width:180px; display:block;">
+                <div style="opacity:0.6; margin-top:4px;">Slide to move the cut plane</div>
+            </div>
         </div>
 
         <!-- Right Panel - Tools & Properties -->
@@ -625,6 +647,7 @@
     <script src="js/selection.js"></script>
     <script src="js/align.js"></script>
     <script src="js/csg-operations.js"></script>
+    <script src="js/view-modes.js"></script>
     <script src="js/pattern.js"></script>
     <script src="js/scene.js"></script>
     <script src="js/orientation-gizmo.js"></script>
