@@ -22,9 +22,9 @@ let currentPatternType = 'row';
 let patternSettings = {
     row: { count: 5, spacingX: 20, spacingY: 0, spacingZ: 0 },
     grid: { rows: 3, columns: 3, spacingX: 20, spacingY: 20, plane: 'xy' },
-    circle: { count: 8, radius: 50, orientation: 'xy', alignToCurve: false },
-    helix: { count: 12, rotations: 3, radius: 40, height: 100, orientation: 'xy', alignToCurve: false },
-    spiral: { count: 12, rotations: 3, startRadius: 0, endRadius: 80, height: 0, orientation: 'xy', alignToCurve: false }
+    circle: { count: 8, radius: 50, orientation: 'xy', alignToCurve: false, alignFlip: false },
+    helix: { count: 12, rotations: 3, radius: 40, height: 100, orientation: 'xy', alignToCurve: false, alignFlip: false },
+    spiral: { count: 12, rotations: 3, startRadius: 0, endRadius: 80, height: 0, orientation: 'xy', alignToCurve: false, alignFlip: false }
 };
 
 // Global setting for all patterns
@@ -65,7 +65,7 @@ function setPatternType(type) {
 function updatePatternSetting(setting, value) {
     // Non-numeric settings
     const nonNumericSettings = ['direction', 'plane', 'orientation'];
-    const booleanSettings = ['alignToCurve'];
+    const booleanSettings = ['alignToCurve', 'alignFlip'];
 
     let parsed;
     if (booleanSettings.includes(setting)) {
@@ -239,7 +239,11 @@ function createPatternClick() {
 // relative to the curve all the way around -- e.g. cones whose points stay facing
 // outward as they go around a circle. The normal is the cross product of the two
 // in-plane axes, which keeps the spin sense matching the cos/sin position.
-function applyCurveAlignment(mesh, orientation, angle) {
+function applyCurveAlignment(mesh, orientation, angle, flip) {
+    // Flip reverses which way the shape faces relative to the curve (in vs out):
+    // an extra half turn about the plane normal points it the opposite radial way.
+    if (flip) angle += Math.PI;
+
     let normal;
     if (orientation === 'xz') normal = new BABYLON.Vector3(0, -1, 0); // X cross Z = -Y
     else if (orientation === 'yz') normal = BABYLON.Axis.X;           // Y cross Z = +X
@@ -328,7 +332,7 @@ function executePattern() {
             }
 
             if (settings.alignToCurve) {
-                applyCurveAlignment(newObj.mesh, settings.orientation, angle);
+                applyCurveAlignment(newObj.mesh, settings.orientation, angle, settings.alignFlip);
             }
         } else if (currentPatternType === 'helix') {
             // Helix/3D Spiral pattern (like a spring or spiral staircase)
@@ -361,7 +365,7 @@ function executePattern() {
             }
 
             if (settings.alignToCurve) {
-                applyCurveAlignment(newObj.mesh, settings.orientation, angle);
+                applyCurveAlignment(newObj.mesh, settings.orientation, angle, settings.alignFlip);
             }
         } else if (currentPatternType === 'spiral') {
             // Archimedean/Flat Spiral pattern (like a nautilus shell or galaxy)
@@ -406,7 +410,7 @@ function executePattern() {
             }
 
             if (settings.alignToCurve) {
-                applyCurveAlignment(newObj.mesh, settings.orientation, angle);
+                applyCurveAlignment(newObj.mesh, settings.orientation, angle, settings.alignFlip);
             }
         }
 
