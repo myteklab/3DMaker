@@ -151,6 +151,15 @@ window.loadProjectData = async function(data) {
         data = JSON.parse(data);
     }
     await _loadSceneFromData(data);
+
+    // Seed a baseline history entry for the loaded scene. Without this the
+    // first action (e.g. a CSG subtract) becomes history[0] with the loaded
+    // state never recorded, so undo has nothing earlier to return to and
+    // silently does nothing. Reset first so a re-load doesn't stack states.
+    history = [];
+    historyIndex = -1;
+    saveState('Loaded');
+
     hasUnsavedChanges = false;
 };
 
