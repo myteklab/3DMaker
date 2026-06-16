@@ -219,17 +219,38 @@ function _createTempMeshForCSG(data) {
     return mesh;
 }
 
-// Compose the world matrix an operand had when this CSG was created, from its
-// stored position/rotation/scaling. Used to recover the result mesh's original
-// (creation-time) transform, which Babylon's toMesh() copies from the first operand.
-function _creationWorldMatrix(op) {
-    if (!op || !op.position || !op.rotation) return null;
+// Compose a matrix from an operand's stored position/rotation/scaling.
+// This is the operand's transform (T1) at the moment its parent CSG was created.
+function _composeStoredTransform(op) {
     const scl = op.scaling
         ? new BABYLON.Vector3(op.scaling.x, op.scaling.y, op.scaling.z)
         : BABYLON.Vector3.One();
     const rot = BABYLON.Quaternion.FromEulerAngles(op.rotation.x, op.rotation.y, op.rotation.z);
     const pos = new BABYLON.Vector3(op.position.x, op.position.y, op.position.z);
     return BABYLON.Matrix.Compose(scl, rot, pos);
+}
+
+function _isCSGOperand(op) {
+    return op && op.type === 'csg' && op.operation && op.operands && op.operands.length >= 1;
+}
+
+// The transform Babylon's toMesh() gave a CSG result mesh at creation (T0).
+// toMesh() copies the transform of the FIRST operand's CSG. When that first
+// operand is a primitive, T0 is simply the primitive's stored transform. When
+// it is itself a CSG, the rebuild bakes that child's geometry into world space
+// and assigns the result only the child's delta (T0^-1 * T1) -- so T0 of the
+// parent is that child's delta, computed recursively. Getting this right for
+// nested CSGs is what keeps operands (e.g. a unioned sphere) from being moved
+// on a later boolean op.
+function _csgCreationTransform(node) {
+    const op0 = node.operands[0];
+    return _isCSGOperand(op0) ? _csgLocalDelta(op0) : _composeStoredTransform(op0);
+}
+
+// A CSG node's local delta: T0^-1 * T1. This maps its world-stored child
+// geometry to the geometry the node actually displayed inside its parent.
+function _csgLocalDelta(node) {
+    return _csgCreationTransform(node).invert().multiply(_composeStoredTransform(node));
 }
 
 // Build a BABYLON.CSG from an object. For CSG results with stored operands,
@@ -250,10 +271,8 @@ function buildCSGForObject(obj) {
     // T0 -- that is what rotated "on its side" shapes back upright on a later
     // subtract. Apply only the delta the user moved the mesh by since creation:
     // points go through T0^-1 then T1, i.e. parentMatrix = T0^-1 * T1.
-    const t0 = _creationWorldMatrix(obj.operands[0]);
-    const parentMatrix = t0
-        ? t0.clone().invert().multiply(currentWorld)
-        : currentWorld;
+    const t0 = _csgCreationTransform(obj);
+    const parentMatrix = t0.clone().invert().multiply(currentWorld);
 
     const tempMeshes = [];
     try {
@@ -281,15 +300,13 @@ function _rebuildCSGTree(operands, operation, parentWorldMatrix, tempMeshes) {
 function _operandToCSG(data, parentWorldMatrix, tempMeshes) {
     // Nested CSG with operands — recurse to rebuild from primitives
     if (data.type === 'csg' && data.operands && data.operands.length >= 2 && data.operation) {
-        // This operand's stored position/rotation is its mesh transform at clone time.
-        // Compose with parent transform so nested operands end up in correct world space.
-        const pos = new BABYLON.Vector3(data.position.x, data.position.y, data.position.z);
-        const rot = BABYLON.Quaternion.FromEulerAngles(data.rotation.x, data.rotation.y, data.rotation.z);
-        const scl = data.scaling
-            ? new BABYLON.Vector3(data.scaling.x, data.scaling.y, data.scaling.z)
-            : BABYLON.Vector3.One();
-        const localMatrix = BABYLON.Matrix.Compose(scl, rot, pos);
-        const combinedMatrix = localMatrix.multiply(parentWorldMatrix);
+        // This operand's OWN children are already stored in world space (relative
+        // to this operand's creation frame). Applying its full stored transform
+        // (T1) here would double-count that frame -- the same mistake the top
+        // level avoids -- which moved unioned operands and mis-cut later subtracts.
+        // Apply only this operand's delta (T0^-1 * T1) composed with the parent.
+        const localDelta = _csgLocalDelta(data);
+        const combinedMatrix = localDelta.multiply(parentWorldMatrix);
 
         return _rebuildCSGTree(data.operands, data.operation, combinedMatrix, tempMeshes);
     }
