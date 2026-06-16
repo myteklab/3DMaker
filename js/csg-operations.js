@@ -348,36 +348,6 @@ function _operandToCSG(data, parentWorldMatrix, tempMeshes) {
 }
 
 
-// Move a mesh's origin to the center of its geometry WITHOUT moving the geometry
-// in world space, so the transform gizmo lands on the shape. The local-space
-// bounding center is subtracted from every vertex, then the mesh is shifted by
-// that same offset (rotated/scaled into world space) so nothing appears to move.
-function recenterMeshOrigin(mesh) {
-    const positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-    if (!positions || positions.length === 0) return;
-
-    mesh.refreshBoundingInfo();
-    // Clone: boundingBox.center is a live vector that refreshBoundingInfo() below
-    // mutates in place, which would zero out the offset before we apply it.
-    const c = mesh.getBoundingInfo().boundingBox.center.clone(); // local-space center
-    if (Math.abs(c.x) < 1e-6 && Math.abs(c.y) < 1e-6 && Math.abs(c.z) < 1e-6) return;
-
-    for (let i = 0; i < positions.length; i += 3) {
-        positions[i]     -= c.x;
-        positions[i + 1] -= c.y;
-        positions[i + 2] -= c.z;
-    }
-    mesh.updateVerticesData(BABYLON.VertexBuffer.PositionKind, positions);
-    mesh.refreshBoundingInfo();
-
-    // Shift the mesh by the center offset expressed in world space (rotation +
-    // scale applied, no translation) so the geometry stays exactly where it was.
-    mesh.computeWorldMatrix(true);
-    const offset = BABYLON.Vector3.TransformNormal(c, mesh.getWorldMatrix());
-    mesh.position.addInPlace(offset);
-    mesh.computeWorldMatrix(true);
-}
-
 function performCSG(operation) {
     if (selectedObjects.length < 2) {
         showToast('Select 2 or more objects', 'error');
@@ -424,14 +394,9 @@ function performCSG(operation) {
         // Create new mesh from result
         const resultMesh = result.toMesh(`object_${objectCounter}`, selectedObjects[0].mesh.material, scene);
 
-        // Move the origin to the geometry's center so the transform gizmo sits on
-        // the shape. A CSG result otherwise inherits the first operand's origin,
-        // which lands off to one side (e.g. a single cone of a merged pattern).
-        recenterMeshOrigin(resultMesh);
-
         // Record the transform Babylon just assigned (T0). This is the robust
         // source of truth for future rebuilds when this result is reused as an
-        // operand -- captured now (after recentering), before the user moves it.
+        // operand -- captured now, before the user moves it.
         resultMesh.computeWorldMatrix(true);
         const creationMatrix = Array.from(resultMesh.getWorldMatrix().m);
 
