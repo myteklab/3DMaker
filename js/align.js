@@ -46,89 +46,54 @@ function alignToOrigin() {
     showToast(`Aligned ${objectsToAlign.length} object(s) to origin`);
 }
 
-// Get bounding box for an object
+// World-space bounds. boundingInfo.minimum/maximum are local to the mesh, so
+// they ignore where it sits and how it is turned. The scene is Z-up: Y is depth.
 function getObjectBounds(obj) {
     if (!obj || !obj.mesh) return null;
 
-    const boundingInfo = obj.mesh.getBoundingInfo();
-    const min = boundingInfo.minimum;
-    const max = boundingInfo.maximum;
-    const center = obj.mesh.position;
+    obj.mesh.computeWorldMatrix(true);
+    const box = obj.mesh.getBoundingInfo().boundingBox;
+    const min = box.minimumWorld;
+    const max = box.maximumWorld;
 
     return {
         left: min.x,
         right: max.x,
-        front: min.z,
-        back: max.z,
-        bottom: min.y,
-        top: max.y,
-        centerX: center.x,
-        centerY: center.z,
-        centerZ: center.y
+        front: min.y,
+        back: max.y,
+        bottom: min.z,
+        top: max.z,
+        centerX: (min.x + max.x) / 2,
+        centerY: (min.y + max.y) / 2,
+        centerZ: (min.z + max.z) / 2
     };
 }
 
-// Align multiple objects to each other
+const ALIGN_AXIS = {
+    left: 'x', right: 'x', centerX: 'x',
+    front: 'y', back: 'y', centerY: 'y',
+    bottom: 'z', top: 'z', centerZ: 'z'
+};
+
+// Every other selected shape moves to match the first one picked
 function alignObjects(alignType) {
     if (selectedObjects.length < 2) {
         showToast('Select at least 2 objects to align', 'error');
         return;
     }
 
-    // Reference object is the first selected
-    const refObj = selectedObjects[0];
-    const refBounds = getObjectBounds(refObj);
-
-    if (!refBounds) {
+    const axis = ALIGN_AXIS[alignType];
+    const refBounds = getObjectBounds(selectedObjects[0]);
+    if (!axis || !refBounds) {
         showToast('Error getting reference object bounds', 'error');
         return;
     }
 
-    // Align all other objects to the reference
     for (let i = 1; i < selectedObjects.length; i++) {
         const obj = selectedObjects[i];
         const objBounds = getObjectBounds(obj);
-
         if (!objBounds) continue;
-
-        switch (alignType) {
-            case 'left':
-                // Align left edges (minimum X)
-                obj.mesh.position.x += (refBounds.left - objBounds.left);
-                break;
-            case 'right':
-                // Align right edges (maximum X)
-                obj.mesh.position.x += (refBounds.right - objBounds.right);
-                break;
-            case 'centerX':
-                // Align horizontal centers
-                obj.mesh.position.x = refBounds.centerX;
-                break;
-            case 'front':
-                // Align front edges (minimum Z)
-                obj.mesh.position.z += (refBounds.front - objBounds.front);
-                break;
-            case 'back':
-                // Align back edges (maximum Z)
-                obj.mesh.position.z += (refBounds.back - objBounds.back);
-                break;
-            case 'centerY':
-                // Align depth centers
-                obj.mesh.position.z = refBounds.centerY;
-                break;
-            case 'bottom':
-                // Align bottom edges (minimum Y)
-                obj.mesh.position.y += (refBounds.bottom - objBounds.bottom);
-                break;
-            case 'top':
-                // Align top edges (maximum Y)
-                obj.mesh.position.y += (refBounds.top - objBounds.top);
-                break;
-            case 'centerZ':
-                // Align vertical centers
-                obj.mesh.position.y = refBounds.centerZ;
-                break;
-        }
+        obj.mesh.position[axis] += refBounds[alignType] - objBounds[alignType];
     }
 
     updateProperties();

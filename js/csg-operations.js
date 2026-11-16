@@ -394,6 +394,14 @@ function performCSG(operation) {
         // Create new mesh from result
         const resultMesh = result.toMesh(`object_${objectCounter}`, selectedObjects[0].mesh.material, scene);
 
+        // When the first operand is a rebuilt CSG, toMesh() hands the result a
+        // rotationQuaternion. Everything else here reads and saves mesh.rotation,
+        // so a turned result lost its turn on the next undo, redo, or reload.
+        if (resultMesh.rotationQuaternion) {
+            resultMesh.rotation = resultMesh.rotationQuaternion.toEulerAngles();
+            resultMesh.rotationQuaternion = null;
+        }
+
         // Record the transform Babylon just assigned (T0). This is the robust
         // source of truth for future rebuilds when this result is reused as an
         // operand -- captured now, before the user moves it.
