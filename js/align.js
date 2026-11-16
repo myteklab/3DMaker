@@ -96,6 +96,7 @@ function alignObjects(alignType) {
         obj.mesh.position[axis] += refBounds[alignType] - objBounds[alignType];
     }
 
+    updateSelectionLabels();
     updateProperties();
     saveState(`Align ${alignType}`);
     showToast(`Aligned ${selectedObjects.length} objects (${alignType})`);
