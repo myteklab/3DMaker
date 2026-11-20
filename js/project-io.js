@@ -457,9 +457,11 @@ async function exportSTL() {
 
                 stlString += `  facet normal ${normal.x.toFixed(6)} ${normal.y.toFixed(6)} ${normal.z.toFixed(6)}\n`;
                 stlString += `    outer loop\n`;
-                stlString += `      vertex ${v1.x.toFixed(6)} ${v1.y.toFixed(6)} ${v1.z.toFixed(6)}\n`;
-                stlString += `      vertex ${v2.x.toFixed(6)} ${v2.y.toFixed(6)} ${v2.z.toFixed(6)}\n`;
-                stlString += `      vertex ${v3.x.toFixed(6)} ${v3.y.toFixed(6)} ${v3.z.toFixed(6)}\n`;
+                // Slicers read STL as millimeters; the scene is in 10 mm units
+                const mm = 1 / UNIT_SCALE;
+                stlString += `      vertex ${(v1.x * mm).toFixed(4)} ${(v1.y * mm).toFixed(4)} ${(v1.z * mm).toFixed(4)}\n`;
+                stlString += `      vertex ${(v2.x * mm).toFixed(4)} ${(v2.y * mm).toFixed(4)} ${(v2.z * mm).toFixed(4)}\n`;
+                stlString += `      vertex ${(v3.x * mm).toFixed(4)} ${(v3.y * mm).toFixed(4)} ${(v3.z * mm).toFixed(4)}\n`;
                 stlString += `    endloop\n`;
                 stlString += `  endfacet\n`;
             }

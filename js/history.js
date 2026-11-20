@@ -23,6 +23,7 @@ historyIndex++;
 
     // Mark project as having unsaved changes
     hasUnsavedChanges = true;
+    printCheckDesignChanged();
 }
 
 async function undo() {
@@ -32,6 +33,7 @@ const state = history[historyIndex];
 await _loadSceneFromData(state.data);
 objectCounter = state.objectCounter;
 showToast('Undo: ' + state.action);
+printCheckDesignChanged();
     } else if (history.length === 0) {
 // No history at all
 showToast('Nothing to undo', 'info');
@@ -46,5 +48,6 @@ const state = history[historyIndex];
 await _loadSceneFromData(state.data);
 objectCounter = state.objectCounter;
 showToast('Redo: ' + state.action);
+printCheckDesignChanged();
     }
 }

@@ -17,7 +17,7 @@
     <script src="https://cdn.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
 
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
     <!-- Top Menu -->
@@ -58,6 +58,9 @@
         </button>
         <button class="menu-btn" id="isolate-btn" onclick="toggleIsolate()" title="Hide everything except the selected shape">
             Isolate
+        </button>
+        <button class="menu-btn" id="print-check-btn" onclick="togglePrintCheck()" title="Find what would go wrong on a 3D printer before you export">
+            Print Check
         </button>
         <div style="margin-left: auto; display: flex; gap: 10px;">
             <button class="menu-btn active" id="move-mode-btn" onclick="setTransformMode('position')" title="Move position (W)">
@@ -102,6 +105,18 @@
 
             <!-- 3D Orientation Gizmo -->
             <canvas id="orientation-gizmo"></canvas>
+
+            <div id="print-check-panel" style="display:none;">
+                <div class="pc-head">
+                    <div>
+                        <div class="pc-heading">Print check</div>
+                        <div id="print-check-summary"></div>
+                    </div>
+                    <button class="pc-close" onclick="togglePrintCheck()" title="Close">&times;</button>
+                </div>
+                <div id="print-check-list"></div>
+                <div class="pc-foot">Checks for a 200 &times; 200 &times; 200 mm printer. It updates as you change the design.</div>
+            </div>
 
             <!-- Cross-section controls (shown only when Section is active) -->
             <div id="section-panel" style="display:none; position:absolute; top:12px; left:12px; z-index:20; background:rgba(30,30,32,0.92); border:1px solid rgba(255,255,255,0.12); border-radius:6px; padding:10px 12px; font-size:12px; color:#ddd; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
@@ -675,7 +690,7 @@
     <!-- JavaScript Modules (loaded in dependency order) -->
     <script src="js/config.js"></script>
     <script src="js/ui.js"></script>
-    <script src="js/history.js"></script>
+    <script src="js/history.js?v=2"></script>
     <script src="js/size-handles.js"></script>
     <script src="js/transforms.js"></script>
     <script src="js/shapes.js"></script>
@@ -684,10 +699,11 @@
     <script src="js/align.js?v=3"></script>
     <script src="js/csg-operations.js?v=3"></script>
     <script src="js/view-modes.js"></script>
+    <script src="js/print-check.js?v=1"></script>
     <script src="js/pattern.js?v=2"></script>
     <script src="js/scene.js?v=1"></script>
     <script src="js/orientation-gizmo.js"></script>
-    <script src="js/project-io.js"></script>
+    <script src="js/project-io.js?v=10"></script>
     <script src="js/keyboard.js"></script>
     <script src="js/init.js"></script>
 </body>
