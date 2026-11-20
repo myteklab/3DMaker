@@ -791,11 +791,13 @@ body {
     background: rgba(255,255,255,0.06) !important;
 }
 
+/* Top left: the camera frames shapes up and to the right, so a panel there hid the very
+   part "Show me" was pointing at. */
 #print-check-panel {
     position: absolute;
     top: 12px;
-    right: 12px;
-    width: 320px;
+    left: 12px;
+    width: 300px;
     max-width: calc(100% - 24px);
     max-height: calc(100% - 24px);
     overflow-y: auto;
@@ -807,6 +809,11 @@ body {
     font-size: 12px;
     color: #ddd;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+#viewport-container:has(#section-panel[style*="block"]) #print-check-panel {
+    top: 150px;
+    max-height: calc(100% - 162px);
 }
 
 #print-check-panel .pc-head {
